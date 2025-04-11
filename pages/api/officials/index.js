@@ -1,9 +1,13 @@
 import sqlite3 from "sqlite3"
 import { open } from "sqlite"
 
-// Helper to generate a slug from a name.
 function slugify(name) {
-    return name.toLowerCase().trim().replace(/\s+/g, "-")
+    return name
+        .normalize("NFD")
+        .replace(/\p{Diacritic}/gu, "")
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, "-")
 }
 
 export default async function handler(req, res) {
@@ -12,25 +16,52 @@ export default async function handler(req, res) {
             filename: "./lobbying.db",
             driver: sqlite3.Database,
         })
-        // Get all dpos_lobbied values from records.
+
         const rows = await db.all(`
-      SELECT dpos_lobbied FROM lobbying_records
-      WHERE dpos_lobbied IS NOT NULL AND TRIM(dpos_lobbied) != ''
-    `)
+            SELECT person_name, job_title, lr.period
+            FROM dpo_entries dpo
+            JOIN lobbying_records lr ON dpo.lobbying_record_id = lr.id
+            WHERE person_name IS NOT NULL AND TRIM(person_name) != ''
+        `)
 
-        // Split each value on "::" and aggregate distinct DPO names.
-        const officialsSet = new Set()
-        rows.forEach((row) => {
-            const parts = row.dpos_lobbied.split("::").map((s) => s.trim())
-            parts.forEach((dpo) => {
-                if (dpo) officialsSet.add(dpo)
+        const nameMap = new Map()
+
+        for (const row of rows) {
+            const ascii = row.person_name
+                .normalize("NFD")
+                .replace(/\p{Diacritic}/gu, "")
+                .toLowerCase()
+
+            if (!nameMap.has(ascii)) nameMap.set(ascii, [])
+            nameMap.get(ascii).push({
+                name: row.person_name,
+                job_title: row.job_title,
+                period: row.period,
             })
-        })
+        }
 
-        const officials = Array.from(officialsSet).map((name) => ({
-            name,
-            slug: slugify(name),
-        }))
+        const officials = Array.from(nameMap.values())
+            .map((variants) => {
+                const counted = variants.map((v) => ({
+                    name: v.name,
+                    job_title: v.job_title,
+                    period: v.period,
+                    score: v.name.split(" ").filter((w) => /^[A-Z]/.test(w))
+                        .length,
+                }))
+                counted.sort((a, b) => b.score - a.score)
+                const best = counted[0]
+
+                return {
+                    name: best.name,
+                    slug: slugify(best.name),
+                    job_title: best.job_title,
+                    periods: Array.from(
+                        new Set(variants.map((v) => v.period).filter(Boolean))
+                    ),
+                }
+            })
+            .sort((a, b) => a.name.localeCompare(b.name))
 
         res.status(200).json(officials)
     } catch (err) {
