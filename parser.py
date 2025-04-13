@@ -78,7 +78,11 @@ def normalize_person_name(raw):
     return name.strip()
 
 def to_ascii(name):
-    return ''.join(c for c in unicodedata.normalize('NFD', name) if unicodedata.category(c) != 'Mn')
+    name = name.replace("-", " ")  # Treat hyphens as spaces
+    return ''.join(
+        c for c in unicodedata.normalize('NFD', name)
+        if unicodedata.category(c) != 'Mn'
+    ).lower()
 
 # --- Data Extraction & Normalization ---
 def fetch_and_parse_csv_from_file(file_path):

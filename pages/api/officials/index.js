@@ -18,20 +18,18 @@ export default async function handler(req, res) {
         })
 
         const rows = await db.all(`
-            SELECT person_name, job_title, lr.period
-            FROM dpo_entries dpo
-            JOIN lobbying_records lr ON dpo.lobbying_record_id = lr.id
-            WHERE person_name IS NOT NULL AND TRIM(person_name) != ''
-        `)
+      SELECT person_name, job_title, lr.period
+      FROM dpo_entries dpo
+      JOIN lobbying_records lr ON dpo.lobbying_record_id = lr.id
+      WHERE person_name IS NOT NULL AND TRIM(person_name) != ''
+    `)
 
         const nameMap = new Map()
-
         for (const row of rows) {
             const ascii = row.person_name
                 .normalize("NFD")
                 .replace(/\p{Diacritic}/gu, "")
                 .toLowerCase()
-
             if (!nameMap.has(ascii)) nameMap.set(ascii, [])
             nameMap.get(ascii).push({
                 name: row.person_name,
@@ -42,25 +40,22 @@ export default async function handler(req, res) {
 
         const officials = Array.from(nameMap.values())
             .map((variants) => {
-                const counted = variants.map((v) => ({
-                    name: v.name,
-                    job_title: v.job_title,
-                    period: v.period,
-                    score: v.name.split(" ").filter((w) => /^[A-Z]/.test(w))
-                        .length,
-                }))
-                counted.sort((a, b) => b.score - a.score)
-                const best = counted[0]
-
+                // Choose the record with the latest (highest numeric) period.
+                const best = variants.reduce((acc, cur) => {
+                    // Compare period values converted to numbers.
+                    return Number(cur.period) > Number(acc.period) ? cur : acc
+                })
                 return {
                     name: best.name,
                     slug: slugify(best.name),
                     job_title: best.job_title,
+                    // Also return an array of all distinct periods for the official
                     periods: Array.from(
                         new Set(variants.map((v) => v.period).filter(Boolean))
                     ),
                 }
             })
+            .filter((off) => off && off.slug)
             .sort((a, b) => a.name.localeCompare(b.name))
 
         res.status(200).json(officials)

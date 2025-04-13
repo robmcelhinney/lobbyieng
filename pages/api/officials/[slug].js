@@ -17,64 +17,231 @@ function toAscii(name) {
         .toLowerCase()
 }
 
+// Helper: extract method from an activity string.
+// E.g., "One email to each of the listed TDs. - Email" returns "Email"
+function extractMethod(activityStr) {
+    if (!activityStr) return ""
+    const parts = activityStr.split("-")
+    return parts[parts.length - 1].trim()
+}
+
 export default async function handler(req, res) {
     try {
-        const { slug, page = 1 } = req.query
+        const { slug, page = 1, lobbyist, year, method } = req.query
+        const PER_PAGE = 10
+        const offset = (page - 1) * PER_PAGE
+
         const db = await open({
             filename: "./lobbying.db",
             driver: sqlite3.Database,
         })
 
-        const dpoRows = await db.all(`
-            SELECT person_name FROM dpo_entries
-        `)
-
-        const nameMap = new Map()
-        for (const row of dpoRows) {
-            const ascii = toAscii(row.person_name)
-            if (!nameMap.has(ascii)) nameMap.set(ascii, [])
-            nameMap.get(ascii).push(row.person_name)
-        }
-
+        // Resolve canonical official name from dpo_entries.
+        const dpoRows = await db.all(`SELECT person_name FROM dpo_entries`)
         let canonical = null
-
         for (const row of dpoRows) {
-            const candidate = row.person_name
-            if (slugify(candidate) === slug) {
-                canonical = candidate
+            if (slugify(row.person_name) === slug) {
+                canonical = row.person_name
                 break
             }
         }
-
         if (!canonical) {
-            console.error("Could not resolve slug:", slug)
             return res.status(404).json({ error: "Official not found" })
         }
 
-        const allRecords = await db.all(
-            `
-            SELECT lr.*
-            FROM lobbying_records lr
-            JOIN dpo_entries dpo ON dpo.lobbying_record_id = lr.id
-            WHERE dpo.person_name = ?
-            ORDER BY lr.date_published DESC
-        `,
-            canonical
+        // Build filtering conditions for lobbyist, year, and method.
+        let filterConditions = ""
+        const filterParams = []
+        if (lobbyist) {
+            filterConditions += " AND LOWER(lr.lobbyist_name) = ? "
+            filterParams.push(lobbyist.toLowerCase())
+        }
+        if (year) {
+            filterConditions += " AND strftime('%Y', lr.date_published) = ? "
+            filterParams.push(year)
+        }
+        if (method) {
+            filterConditions += `
+        AND EXISTS (
+          SELECT 1 FROM lobbying_activity_entries lae
+          WHERE lae.lobbying_record_id = lr.id
+            AND LOWER(lae.activity) LIKE ?
         )
+      `
+            filterParams.push("%" + method.toLowerCase() + "%")
+        }
 
-        const PER_PAGE = 10
-        const paginated = allRecords.slice(
-            (page - 1) * PER_PAGE,
-            page * PER_PAGE
-        )
+        // Query total count using the filters.
+        const countQuery = `
+      SELECT COUNT(DISTINCT lr.id) AS total
+      FROM lobbying_records lr
+      WHERE EXISTS (
+        SELECT 1 FROM dpo_entries dpo
+        WHERE dpo.lobbying_record_id = lr.id
+          AND dpo.person_name = ?
+      )
+      ${filterConditions}
+    `
+        const countRow = await db.get(countQuery, [canonical, ...filterParams])
+        const total = countRow?.total || 0
+
+        // Query paginated records with filters.
+        const baseQuery = `
+      SELECT lr.*,
+        (
+          SELECT GROUP_CONCAT(dpo.person_name || '|' || dpo.job_title || '|' || dpo.public_body, '||')
+          FROM dpo_entries dpo
+          WHERE dpo.lobbying_record_id = lr.id
+        ) AS dpos,
+        (
+          SELECT GROUP_CONCAT(activity, '||')
+          FROM lobbying_activity_entries
+          WHERE lobbying_record_id = lr.id
+        ) AS activities
+      FROM lobbying_records lr
+      WHERE EXISTS (
+        SELECT 1 FROM dpo_entries dpo
+        WHERE dpo.lobbying_record_id = lr.id
+          AND dpo.person_name = ?
+      )
+      ${filterConditions}
+      ORDER BY lr.date_published DESC
+      LIMIT ? OFFSET ?
+    `
+        const records = await db.all(baseQuery, [
+            canonical,
+            ...filterParams,
+            PER_PAGE,
+            offset,
+        ])
+        const parsedRecords = records.map((r) => ({
+            id: r.id,
+            url: r.url,
+            lobbyist_name: r.lobbyist_name,
+            date_published: r.date_published,
+            specific_details: r.specific_details?.slice(0, 1000),
+            intended_results: r.intended_results?.slice(0, 1000),
+            dpo_entries:
+                typeof r.dpos === "string"
+                    ? r.dpos.split("||").map((entry) => {
+                          const [name, job, body] = entry.split("|")
+                          return {
+                              person_name: name,
+                              job_title: job,
+                              public_body: body,
+                          }
+                      })
+                    : [],
+            lobbying_activities:
+                typeof r.activities === "string"
+                    ? r.activities
+                          .split("||")
+                          .map((entry) => {
+                              const parts = entry
+                                  .split("|")
+                                  .map((s) => s.trim())
+                              return parts.length >= 2 && parts[0]
+                                  ? `${parts[0]} - ${parts[1]}`
+                                  : parts[1] || parts[0] || ""
+                          })
+                          .filter(Boolean)
+                    : [],
+        }))
+
+        // Retrieve all records (unpaginated) to compute unique filter options.
+        const allRecordsQuery = `
+      SELECT lr.*,
+        (
+          SELECT GROUP_CONCAT(dpo.person_name || '|' || dpo.job_title || '|' || dpo.public_body, '||')
+          FROM dpo_entries dpo
+          WHERE dpo.lobbying_record_id = lr.id
+        ) AS dpos,
+        (
+          SELECT GROUP_CONCAT(activity, '||')
+          FROM lobbying_activity_entries
+          WHERE lobbying_record_id = lr.id
+        ) AS activities
+      FROM lobbying_records lr
+      WHERE EXISTS (
+        SELECT 1 FROM dpo_entries dpo
+        WHERE dpo.lobbying_record_id = lr.id
+          AND dpo.person_name = ?
+      )
+      ORDER BY lr.date_published DESC
+    `
+        const allRaw = await db.all(allRecordsQuery, [canonical])
+        const allRecords = allRaw.map((r) => ({
+            id: r.id,
+            url: r.url,
+            lobbyist_name: r.lobbyist_name,
+            date_published: r.date_published,
+            specific_details: r.specific_details?.slice(0, 1000),
+            intended_results: r.intended_results?.slice(0, 1000),
+            dpo_entries:
+                typeof r.dpos === "string"
+                    ? r.dpos.split("||").map((entry) => {
+                          const [name, job, body] = entry.split("|")
+                          return {
+                              person_name: name,
+                              job_title: job,
+                              public_body: body,
+                          }
+                      })
+                    : [],
+            lobbying_activities:
+                typeof r.activities === "string"
+                    ? r.activities
+                          .split("||")
+                          .map((entry) => {
+                              const parts = entry
+                                  .split("|")
+                                  .map((s) => s.trim())
+                              return parts.length >= 2 && parts[0]
+                                  ? `${parts[0]} - ${parts[1]}`
+                                  : parts[1] || parts[0] || ""
+                          })
+                          .filter(Boolean)
+                    : [],
+        }))
+
+        // Compute unique filter options.
+        const uniqueLobbyists = Array.from(
+            new Set(allRecords.map((r) => r.lobbyist_name).filter(Boolean))
+        ).sort()
+        const uniqueYears = Array.from(
+            new Set(
+                allRecords
+                    .map((r) =>
+                        new Date(r.date_published).getFullYear().toString()
+                    )
+                    .filter(Boolean)
+            )
+        ).sort((a, b) => b - a)
+        const uniqueMethods = Array.from(
+            new Set(
+                allRecords
+                    .flatMap((r) =>
+                        (r.lobbying_activities || []).map(extractMethod)
+                    )
+                    .filter(Boolean)
+            )
+        ).sort()
 
         res.status(200).json({
             name: canonical,
             slug: slugify(canonical),
-            total: allRecords.length,
+            total,
             page: parseInt(page),
-            pages: Math.ceil(allRecords.length / PER_PAGE),
-            records: paginated,
+            pageSize: PER_PAGE,
+            records: parsedRecords,
+            lobbyists: uniqueLobbyists,
+            years: uniqueYears,
+            methods: uniqueMethods,
+            currentFilters: {
+                lobbyistFilter: lobbyist || "",
+                yearFilter: year || "",
+                methodFilter: method || "",
+            },
         })
     } catch (err) {
         console.error("Error in official detail API:", err)

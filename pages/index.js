@@ -1,5 +1,6 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import Select from "react-select"
 
 export async function getServerSideProps() {
     try {
@@ -13,143 +14,169 @@ export async function getServerSideProps() {
     }
 }
 
-const DEFAULT_TITLES = ["TD", "An Taoiseach", "An Tánaiste"]
+// Helper to deduplicate officials by slug
+function dedupedOfficials(array) {
+    return Array.from(new Map(array.map((item) => [item.slug, item])).values())
+}
 
 export default function Index({ officials }) {
-    const [selectedTitles, setSelectedTitles] = useState(
-        new Set(DEFAULT_TITLES)
-    )
-    const [dropdownOpen, setDropdownOpen] = useState(false)
-    const [searchInput, setSearchInput] = useState("")
-    const allPeriods = Array.from(
-        new Set(officials.flatMap((o) => o.periods))
-    ).sort()
-    const [selectedPeriod, setSelectedPeriod] = useState("")
-
-    const toggleTitle = (title) => {
-        const updated = new Set(selectedTitles)
-        updated.has(title) ? updated.delete(title) : updated.add(title)
-        setSelectedTitles(updated)
-    }
-
-    const uniqueTitles = [...new Set(officials.map((o) => o.job_title))]
-        .filter(Boolean)
-        .sort()
-
-    const filteredTitles = uniqueTitles.filter((title) =>
-        title.toLowerCase().includes(searchInput.toLowerCase())
+    // Show only TDs/An Tánaiste/An Taoiseach.
+    const topOfficials = officials.filter((o) =>
+        [
+            "TD",
+            "An Tánaiste",
+            "An Taoiseach",
+            "Minister",
+            "Minister of State",
+            "Tánaiste and Minister",
+        ].some((title) => o.job_title?.includes(title))
     )
 
-    const filtered = officials.filter(
-        (o) =>
-            [...selectedTitles].some((title) => o.job_title.includes(title)) &&
-            (!selectedPeriod || o.periods.includes(selectedPeriod))
-    )
+    // Build period options from topOfficials.
+    const allPeriods =
+        Array.from(
+            new Set(topOfficials.flatMap((o) => o.periods || []))
+        ).sort() || []
+    // Default to latest period (assumes ascending order)
+    const defaultPeriod =
+        allPeriods.length > 0 ? allPeriods[allPeriods.length - 1] : ""
+
+    // Filters: Name and Period.
+    const [selectedPeriod, setSelectedPeriod] = useState(defaultPeriod)
+    const [selectedName, setSelectedName] = useState(null)
+
+    // Final filter: if a name is selected, filter by that; otherwise filter by period.
+    const filtered = topOfficials.filter((o) => {
+        const matchesName = selectedName ? o.name === selectedName.value : true
+        const matchesPeriod =
+            !selectedPeriod || (o.periods && o.periods.includes(selectedPeriod))
+        return matchesName && matchesPeriod
+    })
+
+    const deduped = dedupedOfficials(filtered)
+
+    // react‑select options for the Name filter using deduped official names.
+    const nameOptions = deduped.map((o) => ({
+        value: o.name,
+        label: o.name,
+    }))
 
     return (
-        <div style={{ padding: "2rem" }}>
-            <h1>Elected Officials – Lobbying Data</h1>
+        <div className="min-h-screen bg-gray-50">
+            {/* Header */}
+            <header className="bg-blue-900 text-white py-4 shadow">
+                <div className="max-w-6xl mx-auto px-4 text-center">
+                    <h1 className="text-4xl font-bold">
+                        Elected Officials – Lobbying Data
+                    </h1>
+                    <p className="mt-2 text-lg">
+                        Search for your favourite elected official.
+                    </p>
+                </div>
+            </header>
 
-            <div style={{ position: "relative", marginBottom: "1rem" }}>
-                <button
-                    onClick={() => setDropdownOpen(!dropdownOpen)}
-                    style={{
-                        padding: "0.5rem",
-                        border: "1px solid #ccc",
-                        background: "#fff",
-                        borderRadius: "4px",
-                        minWidth: "200px",
-                        textAlign: "left",
-                    }}
-                >
-                    {selectedTitles.size
-                        ? [...selectedTitles].join(", ")
-                        : "Filter by Job Title"}
-                </button>
+            {/* Main Content */}
+            <main className="max-w-6xl mx-auto px-4 py-8">
+                {/* Filters Bar at Top */}
+                <div className="bg-white rounded-md shadow p-4 mb-6 flex flex-col sm:flex-row gap-6 items-center">
+                    {/* Period Filter */}
+                    <div className="w-40">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Period
+                        </label>
+                        <select
+                            value={selectedPeriod}
+                            onChange={(e) => setSelectedPeriod(e.target.value)}
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="">All Periods</option>
+                            {allPeriods.map((period) => (
+                                <option key={period} value={period}>
+                                    {period}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
 
-                {dropdownOpen && (
-                    <div
-                        style={{
-                            position: "absolute",
-                            top: "110%",
-                            left: 0,
-                            background: "#fff",
-                            border: "1px solid #ccc",
-                            padding: "0.5rem",
-                            borderRadius: "4px",
-                            maxHeight: "300px",
-                            overflowY: "auto",
-                            zIndex: 10,
-                        }}
-                    >
-                        <input
-                            type="text"
-                            placeholder="Search titles..."
-                            value={searchInput}
-                            onChange={(e) => setSearchInput(e.target.value)}
-                            style={{
-                                width: "100%",
-                                marginBottom: "0.5rem",
-                                padding: "0.25rem",
-                                border: "1px solid #ddd",
-                                borderRadius: "4px",
+                    {/* Name Filter using react-select */}
+                    <div className="w-64">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Name
+                        </label>
+                        <Select
+                            options={nameOptions}
+                            value={selectedName}
+                            onChange={(option) => setSelectedName(option)}
+                            isClearable
+                            placeholder="Search by name..."
+                            styles={{
+                                control: (provided) => ({
+                                    ...provided,
+                                    borderColor: "#CBD5E0",
+                                    boxShadow: "none",
+                                }),
+                                menu: (provided) => ({
+                                    ...provided,
+                                    zIndex: 9999,
+                                    maxHeight: "300px",
+                                    overflowY: "auto",
+                                    backgroundColor: "white",
+                                }),
                             }}
                         />
-                        {filteredTitles.map((title) => (
-                            <label
-                                key={title}
-                                style={{
-                                    display: "block",
-                                    marginBottom: "0.25rem",
-                                }}
-                            >
-                                <input
-                                    type="checkbox"
-                                    checked={selectedTitles.has(title)}
-                                    onChange={() => toggleTitle(title)}
-                                />{" "}
-                                {title}
-                            </label>
-                        ))}
-                        {filteredTitles.length === 0 && (
-                            <div style={{ color: "#888" }}>No matches</div>
-                        )}
                     </div>
-                )}
-            </div>
 
-            <div style={{ marginBottom: "1rem" }}>
-                <label>
-                    <strong>Filter by Time Period: </strong>
-                    <select
-                        value={selectedPeriod}
-                        onChange={(e) => setSelectedPeriod(e.target.value)}
-                        style={{ marginLeft: "0.5rem", padding: "0.25rem" }}
-                    >
-                        <option value="">All Periods</option>
-                        {allPeriods.map((period) => (
-                            <option key={period} value={period}>
-                                {period}
-                            </option>
-                        ))}
-                    </select>
-                </label>
-            </div>
+                    {/* Clear Filters Button */}
+                    {(selectedPeriod || selectedName) && (
+                        <div>
+                            <button
+                                onClick={() => {
+                                    setSelectedPeriod(defaultPeriod)
+                                    setSelectedName(null)
+                                }}
+                                className="text-red-600 underline text-sm"
+                            >
+                                Clear Filters
+                            </button>
+                        </div>
+                    )}
+                </div>
 
-            <ul>
-                {filtered.map((official) => (
-                    <li key={official.slug}>
-                        <Link
-                            legacyBehavior
-                            href={`/officials/${official.slug}`}
-                        >
-                            <a>
-                                {official.name} – <em>{official.job_title}</em>
-                            </a>
-                        </Link>
-                    </li>
-                ))}
-            </ul>
+                {/* Officials Results */}
+                <section className="bg-white rounded-md shadow p-6">
+                    <h2 className="text-2xl font-semibold mb-4">
+                        Officials ({deduped.length} results)
+                    </h2>
+                    {deduped.length > 0 ? (
+                        <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                            {deduped.map((official) => (
+                                <li
+                                    key={official.slug}
+                                    className="border rounded-md p-4 hover:shadow transition"
+                                >
+                                    <Link
+                                        legacyBehavior
+                                        href={`/officials/${official.slug}`}
+                                    >
+                                        <a>
+                                            <h3 className="font-bold text-gray-900">
+                                                {official.name}
+                                            </h3>
+                                            <p className="text-sm text-gray-600">
+                                                {official.job_title}
+                                            </p>
+                                        </a>
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="text-center text-gray-500">
+                            No results found.
+                        </p>
+                    )}
+                </section>
+            </main>
         </div>
     )
 }

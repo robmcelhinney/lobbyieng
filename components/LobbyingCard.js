@@ -3,12 +3,12 @@ import Link from "next/link"
 
 export default function LobbyingCard({ record }) {
     const {
+        lobbying_activities = [],
         lobbyist_name,
         date_published,
         specific_details,
         intended_results,
         dpos_lobbied,
-        lobbying_activities,
     } = record
 
     const [expanded, setExpanded] = useState(false)
@@ -24,10 +24,9 @@ export default function LobbyingCard({ record }) {
         .map((entry) => entry.split("|")[0]?.trim())
         .filter(Boolean)
 
-    const parsedActivities = (lobbying_activities || "")
-        .split("::")
-        .map((s) => s.trim())
-        .filter(Boolean)
+    const parsedActivities = Array.isArray(lobbying_activities)
+        ? lobbying_activities.filter(Boolean)
+        : []
 
     const slugify = (name) =>
         name
