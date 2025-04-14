@@ -46,7 +46,14 @@ export default function LobbyingCard({ record }) {
                 background: "#fff",
             }}
         >
-            <h3 style={{ marginBottom: "0.5rem" }}>{lobbyist_name}</h3>
+            <h3 style={{ marginBottom: "0.5rem", fontSize: "1.25rem" }}>
+                <Link
+                    href={`/lobbyists/${slugify(lobbyist_name)}`}
+                    className="text-blue-700 underline hover:text-blue-900 transition-colors"
+                >
+                    {lobbyist_name}
+                </Link>
+            </h3>
             <p style={{ fontStyle: "italic", marginBottom: "0.5rem" }}>
                 {formattedDate}
             </p>
