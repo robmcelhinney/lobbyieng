@@ -15,6 +15,16 @@ export async function getServerSideProps() {
     }
 }
 
+// Utility function to match API slugify
+function slugify(name) {
+    return name
+        .normalize("NFD")
+        .replace(/[^\p{L}\p{N}]+/gu, "-") // Replace non-alphanumeric (unicode) with dash
+        .replace(/-+/g, "-") // Collapse multiple dashes
+        .replace(/^-|-$/g, "") // Trim leading/trailing dashes
+        .toLowerCase()
+}
+
 export default function LobbyistsPage({ lobbyists }) {
     const [selectedName, setSelectedName] = useState(null)
 
@@ -92,7 +102,9 @@ export default function LobbyistsPage({ lobbyists }) {
                                     >
                                         <Link
                                             legacyBehavior
-                                            href={`/lobbyists/${lobbyist.slug}`}
+                                            href={`/lobbyists/${slugify(
+                                                lobbyist.name
+                                            )}`}
                                         >
                                             <a>
                                                 <h3 className="font-bold text-gray-900">

@@ -119,7 +119,7 @@ export default function LobbyistPage({ lobbyistData }) {
     return (
         <>
             <Head>
-                <title>{`Lobbyieng - ${name}`}</title>
+                <title>{`Lobbyist - ${name}`}</title>
             </Head>
             <div className="min-h-screen bg-gray-100">
                 <header className="bg-blue-900 text-white py-4 shadow">

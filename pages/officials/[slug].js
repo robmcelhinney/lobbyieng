@@ -123,7 +123,7 @@ export default function OfficialPage({ officialData }) {
     return (
         <>
             <Head>
-                <title>{`Lobbyieng - ${name}`}</title>
+                <title>{`Official - ${name}`}</title>
             </Head>
             <div className="min-h-screen bg-gray-100">
                 {/* Header */}

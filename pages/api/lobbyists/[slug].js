@@ -4,10 +4,10 @@ import { open } from "sqlite"
 function slugify(name) {
     return name
         .normalize("NFD")
-        .replace(/\p{Diacritic}/gu, "")
+        .replace(/[^\p{L}\p{N}]+/gu, "-") // Replace non-alphanumeric (unicode) with dash
+        .replace(/-+/g, "-") // Collapse multiple dashes
+        .replace(/^-|-$/g, "") // Trim leading/trailing dashes
         .toLowerCase()
-        .trim()
-        .replace(/\s+/g, "-")
 }
 
 // Helper: extract method from an activity string.

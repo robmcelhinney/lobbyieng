@@ -1,236 +1,116 @@
-import { useState } from "react"
-import Link from "next/link"
-import Select from "react-select"
 import Head from "next/head"
+import Link from "next/link"
 
-const topOfficialsTitles = [
-    "TD",
-    "An Tánaiste",
-    "An Taoiseach",
-    "Minister",
-    "Minister of State",
-    "Tánaiste and Minister",
-]
-
-export async function getServerSideProps() {
-    try {
-        // Define topOfficials job titles
-        const topOfficialsTitles = [
-            "TD",
-            "An Tánaiste",
-            "An Taoiseach",
-            "Minister",
-            "Minister of State",
-            "Tánaiste and Minister",
-        ]
-        const jobTitlesParam = topOfficialsTitles.join(",")
-        // Fetch all periods by default (period=All) and filter by topOfficials job titles
-        const res = await fetch(
-            `http://localhost:3000/api/officials?period=All&job_titles=${encodeURIComponent(
-                jobTitlesParam
-            )}`
-        )
-        if (!res.ok) throw new Error("API failed")
-        const officials = await res.json()
-        return { props: { officials } }
-    } catch (err) {
-        console.error("Error fetching officials:", err)
-        return { props: { officials: [] } }
-    }
-}
-
-// Helper to deduplicate officials by slug
-function dedupedOfficials(array) {
-    return Array.from(new Map(array.map((item) => [item.slug, item])).values())
-}
-
-export default function Index({ officials }) {
-    // Show only TDs/An Tánaiste/An Taoiseach.
-    const topOfficials = officials.filter((o) =>
-        topOfficialsTitles.some((title) => o.job_title?.includes(title))
-    )
-
-    // Build period options from topOfficials.
-    // Sort periods by year, then by month
-    function extractYearMonth(period) {
-        // Assumes format like '1 Jan, 2016 to 30 Apr, 2016'
-        const match = period.match(/(\d{1,2}) (\w+), (\d{4})/)
-        if (!match) return { year: 0, month: 0 }
-        const year = parseInt(match[3], 10)
-        const monthNames = [
-            "Jan",
-            "Feb",
-            "Mar",
-            "Apr",
-            "May",
-            "Jun",
-            "Jul",
-            "Aug",
-            "Sep",
-            "Oct",
-            "Nov",
-            "Dec",
-        ]
-        const month = monthNames.indexOf(match[2]) + 1
-        return { year, month }
-    }
-    const allPeriods =
-        Array.from(new Set(topOfficials.flatMap((o) => o.periods || []))).sort(
-            (a, b) => {
-                const ay = extractYearMonth(a)
-                const by = extractYearMonth(b)
-                if (ay.year !== by.year) return ay.year - by.year
-                return ay.month - by.month
-            }
-        ) || []
-    // // Default to latest period (assumes ascending order)
-    // const defaultPeriod =
-    //     allPeriods.length > 0 ? allPeriods[allPeriods.length - 1] : ""
-
-    // Default to 'All Periods' (empty string)
-    const defaultPeriod = ""
-
-    // Filters: Name and Period.
-    const [selectedPeriod, setSelectedPeriod] = useState(defaultPeriod)
-    const [selectedName, setSelectedName] = useState(null)
-
-    // Final filter: if a name is selected, filter by that; otherwise filter by period.
-    const filtered = topOfficials.filter((o) => {
-        const matchesName = selectedName ? o.name === selectedName.value : true
-        const matchesPeriod =
-            !selectedPeriod || (o.periods && o.periods.includes(selectedPeriod))
-        return matchesName && matchesPeriod
-    })
-
-    const deduped = dedupedOfficials(filtered)
-
-    // react‑select options for the Name filter using deduped official names.
-    const nameOptions = deduped.map((o) => ({
-        value: o.name,
-        label: o.name,
-    }))
-
+export default function Home() {
     return (
         <>
             <Head>
                 <title>Lobbyieng</title>
             </Head>
             <div className="min-h-screen bg-gray-50">
-                {/* Header */}
                 <header className="bg-blue-900 text-white py-4 shadow">
                     <div className="max-w-6xl mx-auto px-4 text-center">
-                        <h1 className="text-4xl font-bold">
-                            Elected Officials – Lobbying Data
-                        </h1>
-                        <p className="mt-2 text-lg">
-                            Search for your favourite elected official.
+                        <h1 className="text-4xl font-bold mb-2">Lobbyieng</h1>
+                        <p className="text-lg mb-4">
+                            Welcome to the Irish lobbying and officials
+                            database.
                         </p>
+                        <nav className="flex flex-wrap justify-center gap-6 mt-4">
+                            <Link
+                                href="/dail"
+                                className="text-white text-lg font-semibold hover:underline"
+                            >
+                                Dáil Search
+                            </Link>
+                            <Link
+                                href="/officials"
+                                className="text-white text-lg font-semibold hover:underline"
+                            >
+                                All Officials
+                            </Link>
+                            <Link
+                                href="/lobbyists"
+                                className="text-white text-lg font-semibold hover:underline"
+                            >
+                                Lobbyists
+                            </Link>
+                        </nav>
                     </div>
                 </header>
-
-                {/* Main Content */}
-                <main className="max-w-6xl mx-auto px-4 py-8">
-                    {/* Filters Bar at Top */}
-                    <div className="bg-white rounded-md shadow p-4 mb-6 flex flex-col sm:flex-row gap-6 items-center">
-                        {/* Period Filter */}
-                        <div className="w-40">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Period
-                            </label>
-                            <select
-                                value={selectedPeriod}
-                                onChange={(e) =>
-                                    setSelectedPeriod(e.target.value)
-                                }
-                                className="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option value="">All Periods</option>
-                                {allPeriods.map((period) => (
-                                    <option key={period} value={period}>
-                                        {period}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {/* Name Filter using react-select */}
-                        <div className="w-64">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Name
-                            </label>
-                            <Select
-                                options={nameOptions}
-                                value={selectedName}
-                                onChange={(option) => setSelectedName(option)}
-                                isClearable
-                                placeholder="Search by name..."
-                                styles={{
-                                    control: (provided) => ({
-                                        ...provided,
-                                        borderColor: "#CBD5E0",
-                                        boxShadow: "none",
-                                    }),
-                                    menu: (provided) => ({
-                                        ...provided,
-                                        zIndex: 9999,
-                                        maxHeight: "300px",
-                                        overflowY: "auto",
-                                        backgroundColor: "white",
-                                    }),
-                                }}
-                            />
-                        </div>
-
-                        {/* Clear Filters Button */}
-                        {(selectedPeriod || selectedName) && (
-                            <div>
-                                <button
-                                    onClick={() => {
-                                        setSelectedPeriod(defaultPeriod)
-                                        setSelectedName(null)
-                                    }}
-                                    className="text-red-600 underline text-sm"
-                                >
-                                    Clear Filters
-                                </button>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Officials Results */}
-                    <section className="bg-white rounded-md shadow p-6">
-                        <h2 className="text-2xl font-semibold mb-4">
-                            Officials ({deduped.length} results)
+                <main className="max-w-3xl mx-auto px-4 py-16 text-center">
+                    <div className="mb-8 p-4 bg-white rounded shadow text-left">
+                        <h2 className="text-xl font-bold mb-2">
+                            About this project
                         </h2>
-                        {deduped.length > 0 ? (
-                            <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                                {deduped.map((official) => (
-                                    <li
-                                        key={official.slug}
-                                        className="border rounded-md p-4 hover:shadow transition"
-                                    >
-                                        <Link
-                                            legacyBehavior
-                                            href={`/officials/${official.slug}`}
-                                        >
-                                            <a>
-                                                <h3 className="font-bold text-gray-900">
-                                                    {official.name}
-                                                </h3>
-                                                <p className="text-sm text-gray-600">
-                                                    {official.job_title}
-                                                </p>
-                                            </a>
-                                        </Link>
-                                    </li>
-                                ))}
-                            </ul>
-                        ) : (
-                            <p className="text-center text-gray-500">
-                                No results found.
-                            </p>
-                        )}
-                    </section>
+                        <p className="mb-2">
+                            This site visualises lobbying activity involving
+                            elected Irish officials. It pulls data from
+                            Ireland&#39;s official lobbying register, parses it,
+                            and links each lobbying record to the politicians
+                            lobbied. You can browse records by official, filter
+                            by job title, time period, or name, and view
+                            detailed information for each lobbying activity —
+                            including the lobbyist, their goals, methods used
+                            (e.g. meetings, emails), and which officials were
+                            contacted. This project aims to make lobbying
+                            activity more transparent, navigable, and searchable
+                            for citizens, journalists, and researchers. This
+                            project provides a searchable, browsable interface
+                            to Irish lobbying and officials data. All data is
+                            sourced from the official Register of Lobbying at
+                            <a
+                                href="https://www.lobbying.ie/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-700 underline ml-1"
+                            >
+                                lobbying.ie
+                            </a>
+                            .
+                        </p>
+                        <p className="mb-2">
+                            Lobbyieng is open source. You can view and
+                            contribute to the code on
+                            <a
+                                href="https://github.com/robmcelhinney/lobbyieng/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-700 underline ml-1"
+                            >
+                                GitHub
+                            </a>
+                            .
+                        </p>
+                    </div>
+                    <h2 className="text-2xl font-semibold mb-4">
+                        What would you like to explore?
+                    </h2>
+                    <ul className="space-y-4">
+                        <li>
+                            <Link
+                                href="/dail"
+                                className="text-blue-700 underline text-lg hover:text-blue-900"
+                            >
+                                Search Dáil Members (TDs)
+                            </Link>
+                        </li>
+                        <li>
+                            <Link
+                                href="/officials"
+                                className="text-blue-700 underline text-lg hover:text-blue-900"
+                            >
+                                Browse All Officials
+                            </Link>
+                        </li>
+                        <li>
+                            <Link
+                                href="/lobbyists"
+                                className="text-blue-700 underline text-lg hover:text-blue-900"
+                            >
+                                Browse Lobbyists
+                            </Link>
+                        </li>
+                    </ul>
                 </main>
             </div>
         </>

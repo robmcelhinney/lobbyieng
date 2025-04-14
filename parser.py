@@ -18,13 +18,46 @@ BANNED_NAMES = [
     "All TDs",
     "ALL TDS of O.",
     "Dublin South West GE 2024 Candidates",
-    "Lucinda Creighton (Please note that Lucinda Creighton was not a DPO during the return period 1 May - 31 Aug 2016)",
-    "Lucinda Creighton (Please note that Lucinda Creighton was not a DPO during the return period 1 May - 31 Aug 2016)",
     "Members of Government",
     "Members of Oireachtas Committee on Children and Youth Affairs",
     "Members of Oireachtas Health Committee",
     "Skill Set has not engaged on behalf of clients in Ireland to date but will make a number of submissions in the near future in relation to EU Commission proposals.",
+    "(Vacant)"
    ]
+
+# Add a mapping of canonical names to their variants
+NAME_CANONICALIZATION = {
+    "Aengus Ó Snodaigh": [
+        "Aengus Ó Snodaigh",
+        "Aengus O Snoidigh",
+        "aengus o'snodaigh"
+    ],
+    "Micheál Martin": [
+        "Micheál Martin",
+        "Michael Martin"
+    ],
+    "Ross Elwood": [
+        "?Ross Elwood",
+        "Ross Elwood",
+    ],
+    "Lucinda Creighton": [   
+        "Lucinda Creighton (Please note that Lucinda Creighton was not a DPO during the return period 1 May - 31 Aug 2016)",
+        "Lucinda Creighton (Please note that Lucinda Creighton was not a DPO during the return period 1 May - 31 Aug 2016)",
+    ]
+}
+
+def to_ascii(name):
+    name = name.replace("-", " ")  # Treat hyphens as spaces
+    return ''.join(
+        c for c in unicodedata.normalize('NFD', name)
+        if unicodedata.category(c) != 'Mn'
+    ).lower()
+
+# Build a reverse lookup for fast normalization
+NAME_VARIANT_TO_CANONICAL = {}
+for canonical, variants in NAME_CANONICALIZATION.items():
+    for v in variants:
+        NAME_VARIANT_TO_CANONICAL[to_ascii(v)] = canonical
 
 # --- Database Setup ---
 Base = declarative_base()
@@ -90,14 +123,12 @@ def normalize_person_name(raw):
     for prefix in ["Minister ", "Mr ", "Mr. ", "Dr ", "Ms ", "Dep "]:
         if name.startswith(prefix):
             name = name[len(prefix):]
-    return name.strip()
-
-def to_ascii(name):
-    name = name.replace("-", " ")  # Treat hyphens as spaces
-    return ''.join(
-        c for c in unicodedata.normalize('NFD', name)
-        if unicodedata.category(c) != 'Mn'
-    ).lower()
+    name = name.strip()
+    # Canonicalize if possible
+    ascii_name = to_ascii(name)
+    if ascii_name in NAME_VARIANT_TO_CANONICAL:
+        return NAME_VARIANT_TO_CANONICAL[ascii_name]
+    return name
 
 # --- Data Extraction & Normalization ---
 def fetch_and_parse_csv_from_file(file_path):
