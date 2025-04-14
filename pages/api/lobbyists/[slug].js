@@ -11,7 +11,6 @@ function slugify(name) {
 }
 
 // Helper: extract method from an activity string.
-// E.g., "One email to each of the listed TDs. - Email" returns "Email"
 function extractMethod(activityStr) {
     if (!activityStr) return ""
     const parts = activityStr.split("-")
@@ -20,7 +19,7 @@ function extractMethod(activityStr) {
 
 export default async function handler(req, res) {
     try {
-        const { slug, page = 1, lobbyist, year, method, job_titles } = req.query
+        const { slug, page = 1, official, year, method } = req.query
         const PER_PAGE = 10
         const offset = (page - 1) * PER_PAGE
 
@@ -29,31 +28,32 @@ export default async function handler(req, res) {
             driver: sqlite3.Database,
         })
 
-        // Parse job_titles from comma-separated string to array
-        let allowedJobTitles = null
-        if (job_titles) {
-            allowedJobTitles = job_titles.split(",").map((t) => t.trim())
-        }
-
-        // Resolve canonical official name from dpo_entries.
-        const dpoRows = await db.all(`SELECT person_name FROM dpo_entries`)
+        // Resolve canonical lobbyist name from lobbying_records.
+        const rows = await db.all(
+            `SELECT DISTINCT lobbyist_name FROM lobbying_records`
+        )
         let canonical = null
-        for (const row of dpoRows) {
-            if (slugify(row.person_name) === slug) {
-                canonical = row.person_name
+        for (const row of rows) {
+            if (slugify(row.lobbyist_name) === slug) {
+                canonical = row.lobbyist_name
                 break
             }
         }
         if (!canonical) {
-            return res.status(404).json({ error: "Official not found" })
+            return res.status(404).json({ error: "Lobbyist not found" })
         }
 
-        // Build filtering conditions for lobbyist, year, method, and job_title.
+        // Build filtering conditions for official, year, and method.
         let filterConditions = ""
         const filterParams = []
-        if (lobbyist) {
-            filterConditions += " AND LOWER(lr.lobbyist_name) = ? "
-            filterParams.push(lobbyist.toLowerCase())
+        if (official) {
+            filterConditions +=
+                " AND EXISTS (SELECT 1 FROM dpo_entries dpo WHERE dpo.lobbying_record_id = lr.id AND LOWER(dpo.person_name) = ?) "
+            filterParams.push(official.toLowerCase())
+        }
+        if (year) {
+            filterConditions += " AND strftime('%Y', lr.date_published) = ? "
+            filterParams.push(year)
         }
         // Accept method as array for multi-select (OR logic)
         let methodFilters = []
@@ -76,34 +76,17 @@ export default async function handler(req, res) {
                 filterParams.push("%" + m.toLowerCase() + "%")
             )
         }
-        if (year) {
-            filterConditions += " AND strftime('%Y', lr.date_published) = ? "
-            filterParams.push(year)
-        }
-
-        // Add job_title filter if provided
-        let jobTitleCondition = ""
-        if (allowedJobTitles && allowedJobTitles.length > 0) {
-            jobTitleCondition = ` AND dpo.job_title IN (${allowedJobTitles
-                .map(() => "?")
-                .join(",")}) `
-        }
 
         // Query total count using the filters.
         const countQuery = `
       SELECT COUNT(DISTINCT lr.id) AS total
       FROM lobbying_records lr
-      WHERE EXISTS (
-        SELECT 1 FROM dpo_entries dpo
-        WHERE dpo.lobbying_record_id = lr.id
-          AND dpo.person_name = ?
-          ${jobTitleCondition}
-      )
+      WHERE LOWER(lr.lobbyist_name) = ?
+        AND lr.intended_results IS NOT NULL AND TRIM(lr.intended_results) != ''
       ${filterConditions}
     `
         const countRow = await db.get(countQuery, [
-            canonical,
-            ...(allowedJobTitles || []),
+            canonical.toLowerCase(),
             ...filterParams,
         ])
         const total = countRow?.total || 0
@@ -122,19 +105,15 @@ export default async function handler(req, res) {
           WHERE lobbying_record_id = lr.id
         ) AS activities
       FROM lobbying_records lr
-      WHERE EXISTS (
-        SELECT 1 FROM dpo_entries dpo
-        WHERE dpo.lobbying_record_id = lr.id
-          AND dpo.person_name = ?
-          ${jobTitleCondition}
-      )
+      WHERE LOWER(lr.lobbyist_name) = ?
+        AND lr.intended_results IS NOT NULL AND TRIM(lr.intended_results) != ''
       ${filterConditions}
       ORDER BY lr.date_published DESC
       LIMIT ? OFFSET ?
     `
+
         const records = await db.all(baseQuery, [
-            canonical,
-            ...(allowedJobTitles || []),
+            canonical.toLowerCase(),
             ...filterParams,
             PER_PAGE,
             offset,
@@ -142,7 +121,6 @@ export default async function handler(req, res) {
         const parsedRecords = records.map((r) => ({
             id: r.id,
             url: r.url,
-            lobbyist_name: r.lobbyist_name,
             date_published: r.date_published,
             specific_details: r.specific_details?.slice(0, 1000),
             intended_results: r.intended_results?.slice(0, 1000),
@@ -161,14 +139,7 @@ export default async function handler(req, res) {
                 typeof r.activities === "string"
                     ? r.activities
                           .split("||")
-                          .map((entry) => {
-                              const parts = entry
-                                  .split("|")
-                                  .map((s) => s.trim())
-                              return parts.length >= 2 && parts[0]
-                                  ? `${parts[0]} - ${parts[1]}`
-                                  : parts[1] || parts[0] || ""
-                          })
+                          .map((entry) => entry.trim())
                           .filter(Boolean)
                     : [],
         }))
@@ -187,51 +158,53 @@ export default async function handler(req, res) {
           WHERE lobbying_record_id = lr.id
         ) AS activities
       FROM lobbying_records lr
-      WHERE EXISTS (
-        SELECT 1 FROM dpo_entries dpo
-        WHERE dpo.lobbying_record_id = lr.id
-          AND dpo.person_name = ?
-      )
-      ORDER BY lr.date_published DESC
+      WHERE LOWER(lr.lobbyist_name) = ?
+        AND lr.intended_results IS NOT NULL AND TRIM(lr.intended_results) != ''
     `
-        const allRaw = await db.all(allRecordsQuery, [canonical])
+        const allRaw = await db.all(allRecordsQuery, [canonical.toLowerCase()])
         const allRecords = allRaw.map((r) => ({
-            id: r.id,
-            url: r.url,
-            lobbyist_name: r.lobbyist_name,
-            date_published: r.date_published,
-            specific_details: r.specific_details?.slice(0, 1000),
-            intended_results: r.intended_results?.slice(0, 1000),
             dpo_entries:
                 typeof r.dpos === "string"
                     ? r.dpos.split("||").map((entry) => {
-                          const [name, job, body] = entry.split("|")
-                          return {
-                              person_name: name,
-                              job_title: job,
-                              public_body: body,
-                          }
+                          const [name] = entry.split("|")
+                          return name
                       })
                     : [],
+            date_published: r.date_published,
             lobbying_activities:
                 typeof r.activities === "string"
                     ? r.activities
                           .split("||")
-                          .map((entry) => {
-                              const parts = entry
-                                  .split("|")
-                                  .map((s) => s.trim())
-                              return parts.length >= 2 && parts[0]
-                                  ? `${parts[0]} - ${parts[1]}`
-                                  : parts[1] || parts[0] || ""
-                          })
+                          .map((entry) => entry.trim())
                           .filter(Boolean)
                     : [],
         }))
 
         // Compute unique filter options.
-        const uniqueLobbyists = Array.from(
-            new Set(allRecords.map((r) => r.lobbyist_name).filter(Boolean))
+        // For methods, extract from activities (between pipes) and from specific_details (second field)
+        const methodSet = new Set()
+        allRaw.forEach((r) => {
+            // Parse methods from activities
+            if (typeof r.activities === "string") {
+                r.activities.split("||").forEach((act) => {
+                    const parts = act.split("|")
+                    if (parts.length > 1 && parts[1].trim()) {
+                        methodSet.add(parts[1].trim())
+                    }
+                })
+            }
+            // Parse methods from specific_details
+            if (r.specific_details) {
+                r.specific_details.split(/,(?![^|]*\|)/).forEach((entry) => {
+                    const parts = entry.split("|").map((s) => s.trim())
+                    if (parts[1]) methodSet.add(parts[1])
+                })
+            }
+        })
+        const uniqueMethods = Array.from(methodSet).filter(Boolean).sort()
+
+        const uniqueOfficials = Array.from(
+            new Set(allRecords.flatMap((r) => r.dpo_entries).filter(Boolean))
         ).sort()
         const uniqueYears = Array.from(
             new Set(
@@ -242,15 +215,6 @@ export default async function handler(req, res) {
                     .filter(Boolean)
             )
         ).sort((a, b) => b - a)
-        const uniqueMethods = Array.from(
-            new Set(
-                allRecords
-                    .flatMap((r) =>
-                        (r.lobbying_activities || []).map(extractMethod)
-                    )
-                    .filter(Boolean)
-            )
-        ).sort()
 
         res.status(200).json({
             name: canonical,
@@ -259,17 +223,17 @@ export default async function handler(req, res) {
             page: parseInt(page),
             pageSize: PER_PAGE,
             records: parsedRecords,
-            lobbyists: uniqueLobbyists,
+            officials: uniqueOfficials,
             years: uniqueYears,
             methods: uniqueMethods,
             currentFilters: {
-                lobbyistFilter: lobbyist || "",
+                officialFilter: official || "",
                 yearFilter: year || "",
                 methodFilter: method || "",
             },
         })
     } catch (err) {
-        console.error("Error in official detail API:", err)
+        console.error("Error in lobbyist detail API:", err)
         res.status(500).json({ error: "Internal error", details: err.message })
     }
 }
