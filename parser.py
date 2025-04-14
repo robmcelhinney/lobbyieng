@@ -11,6 +11,21 @@ from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 DATA_FOLDER = "data"  # Folder containing CSV files.
 DATABASE_URL = "sqlite:///lobbying.db"
 
+BANNED_NAMES = [
+    "Skill Set Strategy Consultants", 
+    "All Galway West and Galway East TD;s", 
+    "All Public Representatives.",
+    "All TDs",
+    "ALL TDS of O.",
+    "Dublin South West GE 2024 Candidates",
+    "Lucinda Creighton (Please note that Lucinda Creighton was not a DPO during the return period 1 May - 31 Aug 2016)",
+    "Lucinda Creighton (Please note that Lucinda Creighton was not a DPO during the return period 1 May - 31 Aug 2016)",
+    "Members of Government",
+    "Members of Oireachtas Committee on Children and Youth Affairs",
+    "Members of Oireachtas Health Committee",
+    "Skill Set has not engaged on behalf of clients in Ireland to date but will make a number of submissions in the near future in relation to EU Commission proposals.",
+   ]
+
 # --- Database Setup ---
 Base = declarative_base()
 
@@ -186,6 +201,8 @@ def insert_records(records):
                 if len(parts) >= 3:
                     raw_name = parts[0]
                     norm_name = normalize_person_name(raw_name)
+                    if norm_name in BANNED_NAMES:
+                        continue  # Skip banned names
                     ascii = to_ascii(norm_name)
                     name_variants[ascii].append(norm_name)
                     dpo = DPOEntry(

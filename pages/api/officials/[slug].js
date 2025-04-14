@@ -27,7 +27,7 @@ function extractMethod(activityStr) {
 
 export default async function handler(req, res) {
     try {
-        const { slug, page = 1, lobbyist, year, method } = req.query
+        const { slug, page = 1, lobbyist, year, method, job_titles } = req.query
         const PER_PAGE = 10
         const offset = (page - 1) * PER_PAGE
 
@@ -35,6 +35,12 @@ export default async function handler(req, res) {
             filename: "./lobbying.db",
             driver: sqlite3.Database,
         })
+
+        // Parse job_titles from comma-separated string to array
+        let allowedJobTitles = null
+        if (job_titles) {
+            allowedJobTitles = job_titles.split(",").map((t) => t.trim())
+        }
 
         // Resolve canonical official name from dpo_entries.
         const dpoRows = await db.all(`SELECT person_name FROM dpo_entries`)
@@ -49,26 +55,45 @@ export default async function handler(req, res) {
             return res.status(404).json({ error: "Official not found" })
         }
 
-        // Build filtering conditions for lobbyist, year, and method.
+        // Build filtering conditions for lobbyist, year, method, and job_title.
         let filterConditions = ""
         const filterParams = []
         if (lobbyist) {
             filterConditions += " AND LOWER(lr.lobbyist_name) = ? "
             filterParams.push(lobbyist.toLowerCase())
         }
+        // Accept method as array for multi-select (OR logic)
+        let methodFilters = []
+        if (Array.isArray(method)) {
+            methodFilters = method
+        } else if (typeof method === "string" && method) {
+            methodFilters = [method]
+        }
+        if (methodFilters.length > 0) {
+            if (typeof method === "string" && method.includes(",")) {
+                methodFilters = method.split(",").map((s) => s.trim())
+            }
+            filterConditions +=
+                `\n        AND EXISTS (\n          SELECT 1 FROM lobbying_activity_entries lae\n          WHERE lae.lobbying_record_id = lr.id\n            AND ( ` +
+                methodFilters
+                    .map(() => `LOWER(lae.activity) LIKE ?`)
+                    .join(" OR ") +
+                ` )\n        )\n      `
+            methodFilters.forEach((m) =>
+                filterParams.push("%" + m.toLowerCase() + "%")
+            )
+        }
         if (year) {
             filterConditions += " AND strftime('%Y', lr.date_published) = ? "
             filterParams.push(year)
         }
-        if (method) {
-            filterConditions += `
-        AND EXISTS (
-          SELECT 1 FROM lobbying_activity_entries lae
-          WHERE lae.lobbying_record_id = lr.id
-            AND LOWER(lae.activity) LIKE ?
-        )
-      `
-            filterParams.push("%" + method.toLowerCase() + "%")
+
+        // Add job_title filter if provided
+        let jobTitleCondition = ""
+        if (allowedJobTitles && allowedJobTitles.length > 0) {
+            jobTitleCondition = ` AND dpo.job_title IN (${allowedJobTitles
+                .map(() => "?")
+                .join(",")}) `
         }
 
         // Query total count using the filters.
@@ -79,10 +104,15 @@ export default async function handler(req, res) {
         SELECT 1 FROM dpo_entries dpo
         WHERE dpo.lobbying_record_id = lr.id
           AND dpo.person_name = ?
+          ${jobTitleCondition}
       )
       ${filterConditions}
     `
-        const countRow = await db.get(countQuery, [canonical, ...filterParams])
+        const countRow = await db.get(countQuery, [
+            canonical,
+            ...(allowedJobTitles || []),
+            ...filterParams,
+        ])
         const total = countRow?.total || 0
 
         // Query paginated records with filters.
@@ -103,6 +133,7 @@ export default async function handler(req, res) {
         SELECT 1 FROM dpo_entries dpo
         WHERE dpo.lobbying_record_id = lr.id
           AND dpo.person_name = ?
+          ${jobTitleCondition}
       )
       ${filterConditions}
       ORDER BY lr.date_published DESC
@@ -110,6 +141,7 @@ export default async function handler(req, res) {
     `
         const records = await db.all(baseQuery, [
             canonical,
+            ...(allowedJobTitles || []),
             ...filterParams,
             PER_PAGE,
             offset,
