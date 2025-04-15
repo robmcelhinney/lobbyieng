@@ -1,15 +1,6 @@
 import sqlite3 from "sqlite3"
 import { open } from "sqlite"
 
-function slugify(name) {
-    return name
-        .normalize("NFD")
-        .replace(/[^\p{L}\p{N}]+/gu, "-") // Replace non-alphanumeric (unicode) with dash
-        .replace(/-+/g, "-") // Collapse multiple dashes
-        .replace(/^-|-$/g, "") // Trim leading/trailing dashes
-        .toLowerCase()
-}
-
 export default async function handler(req, res) {
     try {
         const db = await open({
