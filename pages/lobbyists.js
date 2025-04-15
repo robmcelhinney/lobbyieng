@@ -7,7 +7,12 @@ export async function getServerSideProps() {
     try {
         const res = await fetch("http://localhost:3000/api/lobbyists")
         if (!res.ok) throw new Error("API failed")
-        const lobbyists = await res.json()
+        const names = await res.json()
+        // Generate lobbyist objects with name and slug
+        const lobbyists = names.map((name) => ({
+            name,
+            slug: slugify(name),
+        }))
         return { props: { lobbyists } }
     } catch (err) {
         console.error("Error fetching lobbyists:", err)
