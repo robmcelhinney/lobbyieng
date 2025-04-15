@@ -21,14 +21,14 @@ export default function Header() {
                             Find a Lobbyist
                         </a>
                     </Link>
+                    <Link href="/dail" legacyBehavior>
+                        <a className="text-white text-lg font-semibold hover:underline">
+                            Find a TD
+                        </a>
+                    </Link>
                     <Link href="/officials" legacyBehavior>
                         <a className="text-white text-lg font-semibold hover:underline">
                             All Officials
-                        </a>
-                    </Link>
-                    <Link href="/dail" legacyBehavior>
-                        <a className="text-white text-lg font-semibold hover:underline">
-                            Find a Politician
                         </a>
                     </Link>
                 </nav>
