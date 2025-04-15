@@ -177,7 +177,7 @@ export default function Index({ officials }) {
                             <div>
                                 <button
                                     onClick={() => {
-                                        setSelectedPeriod(defaultPeriod)
+                                        setSelectedPeriod("")
                                         setSelectedName(null)
                                     }}
                                     className="text-red-600 underline text-sm"
