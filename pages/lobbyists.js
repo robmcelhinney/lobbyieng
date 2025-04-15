@@ -1,24 +1,7 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Select from "react-select"
 import Head from "next/head"
 import Link from "next/link"
-
-export async function getServerSideProps() {
-    try {
-        const res = await fetch("http://localhost:3000/api/lobbyists")
-        if (!res.ok) throw new Error("API failed")
-        const names = await res.json()
-        // Generate lobbyist objects with name and slug
-        const lobbyists = names.map((name) => ({
-            name,
-            slug: slugify(name),
-        }))
-        return { props: { lobbyists } }
-    } catch (err) {
-        console.error("Error fetching lobbyists:", err)
-        return { props: { lobbyists: [] } }
-    }
-}
 
 // Utility function to match API slugify
 function slugify(name) {
@@ -30,23 +13,118 @@ function slugify(name) {
         .toLowerCase()
 }
 
-export default function LobbyistsPage({ lobbyists }) {
-    const [selectedName, setSelectedName] = useState(null)
+export async function getServerSideProps() {
+    try {
+        // Fetch all unique periods
+        const periodsRes = await fetch(
+            "http://localhost:3000/api/officials?period=All"
+        )
+        const officials = periodsRes.ok ? await periodsRes.json() : []
+        // Extract all unique periods from officials (like dail.js)
+        const allPeriods = Array.from(
+            new Set(officials.flatMap((o) => o.periods || []))
+        )
+        // Sort periods by year/month (like dail.js)
+        function extractYearMonth(period) {
+            const match = period && period.match(/(\d{1,2}) (\w+), (\d{4})/)
+            if (!match) return { year: 0, month: 0 }
+            const year = parseInt(match[3], 10)
+            const monthNames = [
+                "Jan",
+                "Feb",
+                "Mar",
+                "Apr",
+                "May",
+                "Jun",
+                "Jul",
+                "Aug",
+                "Sep",
+                "Oct",
+                "Nov",
+                "Dec",
+            ]
+            const month = monthNames.indexOf(match[2]) + 1
+            return { year, month }
+        }
+        allPeriods.sort((a, b) => {
+            const ay = extractYearMonth(a)
+            const by = extractYearMonth(b)
+            if (ay.year !== by.year) return ay.year - by.year
+            return ay.month - by.month
+        })
+        // Fetch latest period
+        const latestRes = await fetch(
+            "http://localhost:3000/api/periods-latest"
+        )
+        const latestJson = latestRes.ok ? await latestRes.json() : {}
+        const latestPeriod =
+            latestJson.period ||
+            (allPeriods.length > 0 ? allPeriods[allPeriods.length - 1] : "")
+        // Fetch lobbyists for latest period
+        const lobbyistsRes = await fetch(
+            `http://localhost:3000/api/lobbyists?period=${encodeURIComponent(
+                latestPeriod
+            )}`
+        )
+        const names = lobbyistsRes.ok ? await lobbyistsRes.json() : []
+        const lobbyists = names.map((name) => ({ name, slug: slugify(name) }))
+        return {
+            props: {
+                lobbyists,
+                allPeriods,
+                latestPeriod,
+            },
+        }
+    } catch (err) {
+        console.error("Error fetching lobbyists or periods:", err)
+        return { props: { lobbyists: [], allPeriods: [], latestPeriod: "" } }
+    }
+}
 
+export default function LobbyistsPage({
+    lobbyists: initialLobbyists,
+    allPeriods,
+    latestPeriod,
+}) {
+    const [selectedName, setSelectedName] = useState(null)
+    const [selectedPeriod, setSelectedPeriod] = useState(latestPeriod)
+    const [lobbyists, setLobbyists] = useState(initialLobbyists)
+    const [isLoading, setIsLoading] = useState(false)
+    // Update lobbyists when period changes
+    useEffect(() => {
+        if (!selectedPeriod) return
+        setIsLoading(true)
+        async function fetchLobbyists() {
+            const res = await fetch(
+                `/api/lobbyists?period=${encodeURIComponent(selectedPeriod)}`
+            )
+            const names = res.ok ? await res.json() : []
+            setLobbyists(names.map((name) => ({ name, slug: slugify(name) })))
+            setSelectedName(null) // Reset name filter on period change
+            setIsLoading(false)
+        }
+        fetchLobbyists()
+    }, [selectedPeriod])
     // Filtered list
     const filtered = selectedName
         ? lobbyists.filter((l) => l.name === selectedName.value)
         : lobbyists
-
     // react-select options
     const nameOptions = lobbyists.map((l) => ({ value: l.name, label: l.name }))
-
     return (
         <>
             <Head>
                 <title>Lobbyieng – Lobbyists</title>
             </Head>
             <div className="min-h-screen bg-gray-50">
+                {isLoading && (
+                    <div className="w-full h-1 bg-blue-200">
+                        <div
+                            className="h-1 bg-blue-600 animate-pulse w-full"
+                            style={{ width: "100%" }}
+                        ></div>
+                    </div>
+                )}
                 <header className="bg-blue-900 text-white py-4 shadow">
                     <div className="max-w-6xl mx-auto px-4 text-center">
                         <h1 className="text-4xl font-bold">Lobbyists</h1>
@@ -57,6 +135,27 @@ export default function LobbyistsPage({ lobbyists }) {
                 </header>
                 <main className="max-w-6xl mx-auto px-4 py-8">
                     <div className="bg-white rounded-md shadow p-4 mb-6 flex flex-col sm:flex-row gap-6 items-center">
+                        {/* Period Filter */}
+                        <div className="w-50">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Period
+                            </label>
+                            <select
+                                value={selectedPeriod}
+                                onChange={(e) =>
+                                    setSelectedPeriod(e.target.value)
+                                }
+                                className="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="">All Periods</option>
+                                {allPeriods.map((period) => (
+                                    <option key={period} value={period}>
+                                        {period}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        {/* Name Filter */}
                         <div className="w-64">
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Name
@@ -83,22 +182,30 @@ export default function LobbyistsPage({ lobbyists }) {
                                 }}
                             />
                         </div>
-                        {selectedName && (
+                        {(selectedName || selectedPeriod !== latestPeriod) && (
                             <div>
                                 <button
-                                    onClick={() => setSelectedName(null)}
+                                    onClick={() => {
+                                        setSelectedName(null)
+                                        setSelectedPeriod("")
+                                    }}
                                     className="text-red-600 underline text-sm"
                                 >
-                                    Clear Filter
+                                    Clear Filters
                                 </button>
                             </div>
                         )}
                     </div>
                     <section className="bg-white rounded-md shadow p-6">
                         <h2 className="text-2xl font-semibold mb-4">
-                            Lobbyists ({filtered.length} results)
+                            Lobbyists ({isLoading ? "..." : filtered.length}{" "}
+                            results)
                         </h2>
-                        {filtered.length > 0 ? (
+                        {isLoading ? (
+                            <div className="text-center text-blue-600 py-8">
+                                Loading lobbyists...
+                            </div>
+                        ) : filtered.length > 0 ? (
                             <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                                 {filtered.map((lobbyist) => (
                                     <li
@@ -107,9 +214,7 @@ export default function LobbyistsPage({ lobbyists }) {
                                     >
                                         <Link
                                             legacyBehavior
-                                            href={`/lobbyists/${slugify(
-                                                lobbyist.name
-                                            )}`}
+                                            href={`/lobbyists/${lobbyist.slug}`}
                                         >
                                             <a>
                                                 <h3 className="font-bold text-gray-900">

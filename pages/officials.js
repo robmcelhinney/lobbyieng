@@ -33,21 +33,43 @@ export async function getServerSideProps() {
     }
 }
 
-export default function OfficialsPage({ officials }) {
+export default function OfficialsPage({ officials: initialOfficials }) {
     // Job Title Filter
     const [selectedTitles, setSelectedTitles] = useState(new Set())
     const [dropdownOpen, setDropdownOpen] = useState(false)
     const [titleSearchInput, setTitleSearchInput] = useState("")
     // Period Filter
-    const allPeriods = Array.from(
-        new Set(officials.flatMap((o) => o.periods || []))
-    ).sort()
-    // // Default to latest period (assumes ascending order)
-    const defaultPeriod =
-        allPeriods.length > 0 ? allPeriods[allPeriods.length - 1] : ""
-    const [selectedPeriod, setSelectedPeriod] = useState(defaultPeriod)
+    const [allPeriods, setAllPeriods] = useState([])
+    const [selectedPeriod, setSelectedPeriod] = useState("")
+    const [officials, setOfficials] = useState(initialOfficials)
     // Name Filter
     const [selectedName, setSelectedName] = useState(null)
+    const [isLoading, setIsLoading] = useState(false)
+
+    // Fetch all periods on mount
+    useEffect(() => {
+        fetch("/api/periods")
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.periods && data.periods.length > 0) {
+                    setAllPeriods(data.periods)
+                    // Default to latest period (last in sorted list)
+                    setSelectedPeriod(data.periods[data.periods.length - 1])
+                }
+            })
+    }, [])
+
+    // Always fetch, even if selectedPeriod is empty (All)
+    useEffect(() => {
+        setIsLoading(true)
+        const url = selectedPeriod
+            ? `/api/officials?period=${encodeURIComponent(selectedPeriod)}`
+            : `/api/officials?period=All`
+        fetch(url)
+            .then((res) => res.json())
+            .then((data) => setOfficials(data))
+            .finally(() => setIsLoading(false))
+    }, [selectedPeriod])
 
     // Unique job titles (remove 'All' option)
     const uniqueTitles = Array.from(
@@ -92,9 +114,8 @@ export default function OfficialsPage({ officials }) {
                 [...selectedTitles].some((title) =>
                     o.job_title.includes(title)
                 ))
-        const matchesPeriod =
-            !selectedPeriod || (o.periods && o.periods.includes(selectedPeriod))
-        return matchesName && matchesTitle && matchesPeriod
+        // Remove matchesPeriod check: API already filters by period
+        return matchesName && matchesTitle
     })
 
     const deduped = Array.from(
@@ -113,6 +134,15 @@ export default function OfficialsPage({ officials }) {
                 <title>Lobbyieng - All Officials</title>
             </Head>
             <div className="min-h-screen bg-gray-50">
+                {/* Loading bar */}
+                {isLoading && (
+                    <div className="w-full h-1 bg-blue-200">
+                        <div
+                            className="h-1 bg-blue-600 animate-pulse w-full"
+                            style={{ width: "100%" }}
+                        ></div>
+                    </div>
+                )}
                 <header className="bg-blue-900 text-white py-4 shadow">
                     <div className="max-w-6xl mx-auto px-4 text-center">
                         <h1 className="text-4xl font-bold">
@@ -195,7 +225,7 @@ export default function OfficialsPage({ officials }) {
                                 )}
                             </div>
                             {/* Period Filter */}
-                            <div className="w-32">
+                            <div className="w-50">
                                 <label className="block mb-1 text-sm font-medium text-gray-700">
                                     Period
                                 </label>
@@ -246,9 +276,14 @@ export default function OfficialsPage({ officials }) {
                     </div>
                     <div className="bg-white rounded-md shadow-md p-6">
                         <h2 className="text-2xl font-semibold mb-4">
-                            Officials ({deduped.length} results)
+                            Officials ({isLoading ? "..." : deduped.length}{" "}
+                            results)
                         </h2>
-                        {deduped.length > 0 ? (
+                        {isLoading ? (
+                            <div className="text-center text-blue-600 py-8">
+                                Loading officials...
+                            </div>
+                        ) : deduped.length > 0 ? (
                             <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                                 {deduped.map((official) => (
                                     <li

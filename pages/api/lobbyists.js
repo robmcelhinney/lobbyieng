@@ -7,10 +7,20 @@ export default async function handler(req, res) {
             filename: "./lobbying.db",
             driver: sqlite3.Database,
         })
-        // Get all unique lobbyist names (non-empty)
-        const rows = await db.all(
-            `SELECT DISTINCT lobbyist_name FROM lobbying_records WHERE lobbyist_name IS NOT NULL AND TRIM(lobbyist_name) != ''`
-        )
+        const { period } = req.query
+        let rows
+        if (period && period !== "All") {
+            // Filter by period
+            rows = await db.all(
+                `SELECT DISTINCT lobbyist_name FROM lobbying_records WHERE lobbyist_name IS NOT NULL AND TRIM(lobbyist_name) != '' AND period = ?`,
+                [period]
+            )
+        } else {
+            // All periods
+            rows = await db.all(
+                `SELECT DISTINCT lobbyist_name FROM lobbying_records WHERE lobbyist_name IS NOT NULL AND TRIM(lobbyist_name) != ''`
+            )
+        }
         // Map to array of names only
         const lobbyists = rows
             .map((row) => row.lobbyist_name)
