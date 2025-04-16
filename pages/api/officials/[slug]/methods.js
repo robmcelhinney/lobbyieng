@@ -61,7 +61,7 @@ export default async function handler(req, res) {
                 methodCounts[method] = (methodCounts[method] || 0) + 1
             }
         })
-        res.status(200).json({ methods: methodCounts })
+        res.status(200).json({ methods: methodCounts, name: canonical })
     } catch (err) {
         res.status(500).json({ error: err.message })
     }

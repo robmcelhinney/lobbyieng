@@ -57,13 +57,19 @@ export default function MethodsPieChartOfficial() {
     return (
         <>
             <Head>
-                <title>{name ? `Lobbying Methods for ${name}` : "Lobbying Methods Breakdown"}</title>
+                <title>
+                    {name
+                        ? `Lobbying Methods for ${name}`
+                        : "Lobbying Methods Breakdown"}
+                </title>
             </Head>
             <div className="min-h-screen bg-gray-50">
                 <header className="bg-blue-900 text-white py-4">
                     <div className="max-w-3xl mx-auto px-4 text-center">
                         <h1 className="text-3xl font-bold">
-                            {name ? `Lobbying Methods for ${name}` : "Lobbying Methods Breakdown"}
+                            {name
+                                ? `Lobbying Methods for ${name}`
+                                : "Lobbying Methods Breakdown"}
                         </h1>
                         <p className="mt-1">
                             Proportion of Meetings, Emails, Calls, and other
