@@ -10,13 +10,6 @@ function slugify(name) {
         .toLowerCase()
 }
 
-// Helper: extract method from an activity string.
-function extractMethod(activityStr) {
-    if (!activityStr) return ""
-    const parts = activityStr.split("-")
-    return parts[parts.length - 1].trim()
-}
-
 export default async function handler(req, res) {
     try {
         const { slug, page = 1, official, year, method } = req.query

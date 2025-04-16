@@ -157,9 +157,15 @@ export default function OfficialPage({ officialData }) {
                         {/* Link to Connections Graph */}
                         <a
                             href={`/connections/${slug}`}
-                            className="inline-block mt-4 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded shadow transition"
+                            className="inline-block mt-4 mx-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded shadow transition"
                         >
                             View Connections Graph
+                        </a>
+                        <a
+                            href={`/methods/${slug}`}
+                            className="inline-block mt-4 mx-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded shadow transition"
+                        >
+                            View Method Pie
                         </a>
                     </div>
                 </header>
