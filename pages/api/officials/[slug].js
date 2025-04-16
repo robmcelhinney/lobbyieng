@@ -20,9 +20,24 @@ function extractMethod(activityStr) {
 
 export default async function handler(req, res) {
     try {
-        const { slug, page = 1, lobbyist, year, method, job_titles } = req.query
-        const PER_PAGE = 10
-        const offset = (page - 1) * PER_PAGE
+        const {
+            slug,
+            page = 1,
+            lobbyist,
+            year,
+            method,
+            job_titles,
+            per_page = 10,
+        } = req.query
+
+        let perPageNum = 10
+        let returnAll = false
+        if (per_page === "All") {
+            returnAll = true
+        } else {
+            perPageNum = parseInt(per_page, 10) || 10
+        }
+        const offset = (page - 1) * perPageNum
 
         const db = await open({
             filename: "./lobbying.db",
@@ -108,7 +123,7 @@ export default async function handler(req, res) {
         ])
         const total = countRow?.total || 0
 
-        // Query paginated records with filters.
+        // Define baseQuery for paginated fetch
         const baseQuery = `
       SELECT lr.*,
         (
@@ -132,13 +147,47 @@ export default async function handler(req, res) {
       ORDER BY lr.date_published DESC
       LIMIT ? OFFSET ?
     `
-        const records = await db.all(baseQuery, [
-            canonical,
-            ...(allowedJobTitles || []),
-            ...filterParams,
-            PER_PAGE,
-            offset,
-        ])
+
+        // Query paginated records with filters.
+        let records = []
+        if (returnAll) {
+            // Return all records matching filters (no LIMIT/OFFSET)
+            const allQuery = `
+      SELECT lr.*,
+        (
+          SELECT GROUP_CONCAT(dpo.person_name || '|' || dpo.job_title || '|' || dpo.public_body, '||')
+          FROM dpo_entries dpo
+          WHERE dpo.lobbying_record_id = lr.id
+        ) AS dpos,
+        (
+          SELECT GROUP_CONCAT(activity, '||')
+          FROM lobbying_activity_entries
+          WHERE lobbying_record_id = lr.id
+        ) AS activities
+      FROM lobbying_records lr
+      WHERE EXISTS (
+        SELECT 1 FROM dpo_entries dpo
+        WHERE dpo.lobbying_record_id = lr.id
+          AND dpo.person_name = ?
+          ${jobTitleCondition}
+      )
+      ${filterConditions}
+      ORDER BY lr.date_published DESC
+    `
+            records = await db.all(allQuery, [
+                canonical,
+                ...(allowedJobTitles || []),
+                ...filterParams,
+            ])
+        } else {
+            records = await db.all(baseQuery, [
+                canonical,
+                ...(allowedJobTitles || []),
+                ...filterParams,
+                perPageNum,
+                offset,
+            ])
+        }
         const parsedRecords = records.map((r) => ({
             id: r.id,
             url: r.url,
@@ -257,7 +306,7 @@ export default async function handler(req, res) {
             slug: slugify(canonical),
             total,
             page: parseInt(page),
-            pageSize: PER_PAGE,
+            pageSize: returnAll ? records.length : perPageNum,
             records: parsedRecords,
             lobbyists: uniqueLobbyists,
             years: uniqueYears,
