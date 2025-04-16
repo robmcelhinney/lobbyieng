@@ -134,6 +134,13 @@ export default function OfficialPage({ officialData }) {
                             Total Lobbying Efforts:{" "}
                             <span className="font-semibold">{total}</span>
                         </p>
+                        {/* Link to Connections Graph */}
+                        <a
+                            href={`/connections/${slug}`}
+                            className="inline-block mt-4 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded shadow transition"
+                        >
+                            View Connections Graph
+                        </a>
                     </div>
                 </header>
 

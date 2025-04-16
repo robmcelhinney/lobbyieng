@@ -16,11 +16,6 @@ export default function Header() {
                     </a>
                 </Link>
                 <nav className="flex gap-6 items-center">
-                    <Link href="/lobbyists" legacyBehavior>
-                        <a className="text-white text-lg font-semibold hover:underline">
-                            Find a Lobbyist
-                        </a>
-                    </Link>
                     <Link href="/dail" legacyBehavior>
                         <a className="text-white text-lg font-semibold hover:underline">
                             Find a TD
@@ -29,6 +24,11 @@ export default function Header() {
                     <Link href="/officials" legacyBehavior>
                         <a className="text-white text-lg font-semibold hover:underline">
                             All Officials
+                        </a>
+                    </Link>
+                    <Link href="/lobbyists" legacyBehavior>
+                        <a className="text-white text-lg font-semibold hover:underline">
+                            Find a Lobbyist
                         </a>
                     </Link>
                 </nav>
