@@ -126,21 +126,27 @@ export default function ConnectionsOfficial() {
                         )
                     const data2 = await res2.json()
                     if (data2.methods && data2.methods.length > 0) {
-                        latestMethod = data2.methods.includes("Meeting")
-                            ? "Meeting"
-                            : data2.methods[0]
+                        if (data2.methods.includes("Meeting")) {
+                            latestMethod = "Meeting"
+                        } else if (data2.methods.length > 0) {
+                            latestMethod = "All"
+                        } else {
+                            latestMethod = null
+                        }
                         setSelectedMethod(latestMethod)
                         setMethods(data2.methods)
                     }
                     const centralName =
                         data2.name || officialSlug.replace(/-/g, " ")
                     const centralId = centralName.trim().toLowerCase()
+                    // Use td_thumbnails image if available, else fallback handled in nodeCanvasObject
+                    const centralImg = `/images/td_thumbnails/${officialSlug}.jpg`
                     const nodes = [
                         {
                             id: centralId,
                             label: centralName,
                             group: 1,
-                            img: "/images/politician.svg",
+                            img: centralImg,
                             fx: 0,
                             fy: 0,
                         },
@@ -205,7 +211,7 @@ export default function ConnectionsOfficial() {
                             id: centralId,
                             label: centralName,
                             group: 1,
-                            img: "/images/politician.svg",
+                            img: `/images/td_thumbnails/${officialSlug}.jpg`,
                             fx: 0,
                             fy: 0,
                         },
@@ -281,13 +287,21 @@ export default function ConnectionsOfficial() {
             setSelectedYear(years.includes(currentYear) ? currentYear : "All")
         }
         if (methods.length > 0) {
-            setSelectedMethod(methods.includes("Meeting") ? "Meeting" : "All")
+            if (methods.includes("Meeting")) {
+                setSelectedMethod("Meeting")
+            } else {
+                setSelectedMethod("All")
+            }
         }
     }, [years, methods])
 
     useEffect(() => {
         if (methods.length > 0) {
-            setSelectedMethod(methods.includes("Meeting") ? "Meeting" : "All")
+            if (methods.includes("Meeting")) {
+                setSelectedMethod("Meeting")
+            } else {
+                setSelectedMethod("All")
+            }
         }
     }, [methods])
 
@@ -320,7 +334,7 @@ export default function ConnectionsOfficial() {
                         id: centralId,
                         label: centralName,
                         group: 1,
-                        img: "/images/politician.svg",
+                        img: `/images/td_thumbnails/${officialSlug}.jpg`,
                         fx: 0,
                         fy: 0,
                     },
@@ -374,6 +388,9 @@ export default function ConnectionsOfficial() {
         return "#1bc98e"
     }
 
+    // Cache for loaded images and fallback
+    const imageCache = React.useRef({})
+
     const nodeCanvasObject = (node, ctx, globalScale) => {
         const isVisible = visibleNodeIds.has(
             String(node.id).trim().toLowerCase()
@@ -405,8 +422,18 @@ export default function ConnectionsOfficial() {
         }
         if (node.img) {
             const size = 20
-            const img = new window.Image()
-            img.src = node.img
+            let img = imageCache.current[node.img]
+            if (!img) {
+                img = new window.Image()
+                img.src = node.img
+                img.onerror = () => {
+                    if (node.img !== "/images/politician.svg") {
+                        img.src = "/images/politician.svg"
+                        imageCache.current[node.img] = img
+                    }
+                }
+                imageCache.current[node.img] = img
+            }
             ctx.save()
             ctx.beginPath()
             ctx.arc(node.x, node.y, size / 2, 0, 2 * Math.PI, false)
@@ -656,7 +683,6 @@ export default function ConnectionsOfficial() {
                                                 .trim()
                                                 .toLowerCase()
                                                 .replace(/\s+/g, "-")
-                                                .replace(/[^a-z0-9\-]/g, "")
                                             router.push(`/officials/${slug}`)
                                         } else {
                                             // Lobbyist node
@@ -666,7 +692,6 @@ export default function ConnectionsOfficial() {
                                                 .trim()
                                                 .toLowerCase()
                                                 .replace(/\s+/g, "-")
-                                                .replace(/[^a-z0-9\-]/g, "")
                                             router.push(`/lobbyists/${slug}`)
                                         }
                                     }}

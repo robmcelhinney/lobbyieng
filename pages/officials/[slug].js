@@ -41,6 +41,24 @@ export async function getServerSideProps({ params, query }) {
     }
 }
 
+// Politician image component to handle image existence check
+function PoliticianImage({ slug, name }) {
+    const [imgExists, setImgExists] = useState(true)
+    useEffect(() => {
+        setImgExists(true)
+    }, [slug])
+    if (!slug) return null
+    const imagePath = `/images/td_thumbnails/${slug}.jpg`
+    return imgExists ? (
+        <img
+            src={imagePath}
+            alt={name}
+            className="mx-auto mb-4 rounded shadow max-h-48"
+            onError={() => setImgExists(false)}
+        />
+    ) : null
+}
+
 export default function OfficialPage({ officialData }) {
     if (!officialData) return <div>Official not found</div>
     const {
@@ -129,6 +147,8 @@ export default function OfficialPage({ officialData }) {
                 {/* Header */}
                 <header className="bg-blue-900 text-white py-4 shadow">
                     <div className="max-w-6xl mx-auto px-4 text-center">
+                        {/* Politician Image if available */}
+                        <PoliticianImage slug={slug} name={name} />
                         <h1 className="text-4xl font-bold">{name}</h1>
                         <p className="mt-2 text-lg">
                             Total Lobbying Efforts:{" "}
