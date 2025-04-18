@@ -110,6 +110,17 @@ export default function Home() {
                                 Browse Lobbyists
                             </Link>
                         </li>
+                        <li>
+                            <Link
+                                href="/chord"
+                                className="text-blue-700 underline text-lg hover:text-blue-900"
+                            >
+                                Compare Officials (Chord Diagram)
+                            </Link>
+                            <span className="block text-gray-600 text-sm ml-1">
+                                Visualise shared lobbyists between two officials
+                            </span>
+                        </li>
                     </ul>
                 </main>
             </div>
