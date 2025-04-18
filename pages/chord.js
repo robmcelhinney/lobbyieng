@@ -15,6 +15,32 @@ export default function ChordPage() {
     const [endYear, setEndYear] = useState(new Date().getFullYear())
     const [availableYears, setAvailableYears] = useState([])
 
+    // Track color mode and update on class change
+    const [colorMode, setColorMode] = useState(() => {
+        if (typeof window !== "undefined") {
+            return document.documentElement.classList.contains("dark")
+                ? "dark"
+                : "light"
+        }
+        return "light"
+    })
+
+    useEffect(() => {
+        if (typeof window === "undefined") return
+        const observer = new MutationObserver(() => {
+            setColorMode(
+                document.documentElement.classList.contains("dark")
+                    ? "dark"
+                    : "light"
+            )
+        })
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ["class"],
+        })
+        return () => observer.disconnect()
+    }, [])
+
     // For react-select dropdowns
     const officialOptions = officials.map((name) => ({
         value: name,
@@ -24,6 +50,65 @@ export default function ChordPage() {
         officialOptions.find((o) => o.value === selected1) || null
     const selectedOption2 =
         officialOptions.find((o) => o.value === selected2) || null
+
+    // Dynamic styles for react-select
+    function getSelectStyles() {
+        const mode = colorMode
+        return {
+            control: (base, state) => ({
+                ...base,
+                backgroundColor:
+                    mode === "dark"
+                        ? state.isFocused
+                            ? "#1f2937" // dark:bg-gray-800
+                            : "#374151" // dark:bg-gray-700
+                        : state.isFocused
+                        ? "#e0e7ef" // light: focus bg
+                        : "#fff", // light: bg-white
+                borderColor: state.isFocused
+                    ? "#3b82f6"
+                    : mode === "dark"
+                    ? "#4b5563"
+                    : "#d1d5db", // gray-600 or gray-300
+                color: mode === "dark" ? "#f9fafb" : "#111827",
+                boxShadow: state.isFocused ? "0 0 0 1px #3b82f6" : "none",
+                "&:hover": {
+                    borderColor: "#3b82f6",
+                },
+            }),
+            menu: (base) => ({
+                ...base,
+                backgroundColor: mode === "dark" ? "#1f2937" : "#fff",
+                color: mode === "dark" ? "#f9fafb" : "#111827",
+                zIndex: 9999,
+            }),
+            option: (base, state) => ({
+                ...base,
+                backgroundColor: state.isFocused ? "#2563eb" : "transparent",
+                color: state.isFocused
+                    ? "#fff"
+                    : mode === "dark"
+                    ? "#f9fafb"
+                    : "#111827",
+                cursor: "pointer",
+                "&:active": {
+                    backgroundColor: "#1d4ed8",
+                },
+            }),
+            singleValue: (base) => ({
+                ...base,
+                color: mode === "dark" ? "#f9fafb" : "#111827",
+            }),
+            input: (base) => ({
+                ...base,
+                color: mode === "dark" ? "#f9fafb" : "#111827",
+            }),
+            placeholder: (base) => ({
+                ...base,
+                color: mode === "dark" ? "#9ca3af" : "#6b7280",
+            }),
+        }
+    }
 
     // Fetch all officials for autocomplete and available years
     useEffect(() => {
@@ -116,55 +201,7 @@ export default function ChordPage() {
                                     isClearable
                                     isSearchable
                                     placeholder="Select official..."
-                                    styles={{
-                                        control: (base, state) => ({
-                                            ...base,
-                                            backgroundColor: state.isFocused
-                                                ? "#1f2937" // dark:bg-gray-800
-                                                : "#374151", // dark:bg-gray-700
-                                            borderColor: state.isFocused
-                                                ? "#3b82f6"
-                                                : "#4b5563", // blue-500 or gray-600
-                                            color: "#f9fafb", // text-gray-100
-                                            boxShadow: state.isFocused
-                                                ? "0 0 0 1px #3b82f6"
-                                                : "none",
-                                            "&:hover": {
-                                                borderColor: "#3b82f6",
-                                            },
-                                        }),
-                                        menu: (base) => ({
-                                            ...base,
-                                            backgroundColor: "#1f2937", // dark:bg-gray-800
-                                            color: "#f9fafb",
-                                            zIndex: 9999,
-                                        }),
-                                        option: (base, state) => ({
-                                            ...base,
-                                            backgroundColor: state.isFocused
-                                                ? "#2563eb" // blue-600 hover
-                                                : "transparent",
-                                            color: state.isFocused
-                                                ? "#fff"
-                                                : "#f9fafb",
-                                            cursor: "pointer",
-                                            "&:active": {
-                                                backgroundColor: "#1d4ed8", // blue-700
-                                            },
-                                        }),
-                                        singleValue: (base) => ({
-                                            ...base,
-                                            color: "#f9fafb", // text-gray-100
-                                        }),
-                                        input: (base) => ({
-                                            ...base,
-                                            color: "#f9fafb",
-                                        }),
-                                        placeholder: (base) => ({
-                                            ...base,
-                                            color: "#9ca3af", // text-gray-400
-                                        }),
-                                    }}
+                                    styles={getSelectStyles()}
                                 />
                             </div>
                             <div>
@@ -180,55 +217,7 @@ export default function ChordPage() {
                                     isClearable
                                     isSearchable
                                     placeholder="Select official..."
-                                    styles={{
-                                        control: (base, state) => ({
-                                            ...base,
-                                            backgroundColor: state.isFocused
-                                                ? "#1f2937" // dark:bg-gray-800
-                                                : "#374151", // dark:bg-gray-700
-                                            borderColor: state.isFocused
-                                                ? "#3b82f6"
-                                                : "#4b5563", // blue-500 or gray-600
-                                            color: "#f9fafb", // text-gray-100
-                                            boxShadow: state.isFocused
-                                                ? "0 0 0 1px #3b82f6"
-                                                : "none",
-                                            "&:hover": {
-                                                borderColor: "#3b82f6",
-                                            },
-                                        }),
-                                        menu: (base) => ({
-                                            ...base,
-                                            backgroundColor: "#1f2937", // dark:bg-gray-800
-                                            color: "#f9fafb",
-                                            zIndex: 9999,
-                                        }),
-                                        option: (base, state) => ({
-                                            ...base,
-                                            backgroundColor: state.isFocused
-                                                ? "#2563eb" // blue-600 hover
-                                                : "transparent",
-                                            color: state.isFocused
-                                                ? "#fff"
-                                                : "#f9fafb",
-                                            cursor: "pointer",
-                                            "&:active": {
-                                                backgroundColor: "#1d4ed8", // blue-700
-                                            },
-                                        }),
-                                        singleValue: (base) => ({
-                                            ...base,
-                                            color: "#f9fafb", // text-gray-100
-                                        }),
-                                        input: (base) => ({
-                                            ...base,
-                                            color: "#f9fafb",
-                                        }),
-                                        placeholder: (base) => ({
-                                            ...base,
-                                            color: "#9ca3af", // text-gray-400
-                                        }),
-                                    }}
+                                    styles={getSelectStyles()}
                                 />
                             </div>
                         </div>
