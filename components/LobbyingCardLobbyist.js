@@ -55,9 +55,19 @@ export default function LobbyingCardLobbyist({ record }) {
                 </div>
 
                 {isFormerDPO && (
-                    <span className="inline-flex items-center px-2 py-1 text-xs font-semibold text-red-800 bg-red-100 rounded-full dark:bg-red-900 dark:text-red-200">
-                        Former DPO
-                    </span>
+                    <>
+                        <span className="inline-flex items-center px-2 py-1 text-xs font-semibold text-red-800 bg-red-100 rounded-full dark:bg-red-900 dark:text-red-200">
+                            Current/Former DPO
+                        </span>
+                        <a
+                            href="https://www.lobbying.ie/help-resources/frequently-asked-questions/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-2 text-blue-500 hover:underline text-xs"
+                        >
+                            What is lobbying? (FAQ)
+                        </a>
+                    </>
                 )}
             </div>
             <div className="mb-2">
@@ -114,12 +124,14 @@ export default function LobbyingCardLobbyist({ record }) {
                 </table>
             </div>
             <div className="mt-2">
-                <Link
-                    href={record.url}
+                <a
+                    href={`https://${record.url}`}
                     className="text-blue-600 hover:underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
                 >
                     View Full Record
-                </Link>
+                </a>
             </div>
         </div>
     )
