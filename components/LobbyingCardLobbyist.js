@@ -1,4 +1,5 @@
 import React from "react"
+import Link from "next/link"
 
 function parseDetailsAndMethods(details) {
     if (!details) return []
@@ -43,10 +44,21 @@ export default function LobbyingCardLobbyist({ record }) {
         .filter(Boolean)
     const uniqueMethods = Array.from(new Set(methods))
 
+    // Show Former DPO badge if isFormerDPO is true
+    const isFormerDPO = record.isFormerDPO
+
     return (
         <div className="border border-gray-300 dark:border-gray-600 rounded-lg p-4 mb-4 shadow-sm bg-white dark:bg-gray-700 text-cb-light-text dark:text-cb-dark-text">
-            <div className="mb-2 text-sm text-gray-600 dark:text-gray-400">
-                {date}
+            <div className="flex items-center justify-between mb-2">
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                    {date}
+                </div>
+
+                {isFormerDPO && (
+                    <span className="inline-flex items-center px-2 py-1 text-xs font-semibold text-red-800 bg-red-100 rounded-full dark:bg-red-900 dark:text-red-200">
+                        Former DPO
+                    </span>
+                )}
             </div>
             <div className="mb-2">
                 <span className="font-semibold">Politician(s) lobbied: </span>
@@ -100,6 +112,14 @@ export default function LobbyingCardLobbyist({ record }) {
                         )}
                     </tbody>
                 </table>
+            </div>
+            <div className="mt-2">
+                <Link
+                    href={record.url}
+                    className="text-blue-600 hover:underline"
+                >
+                    View Full Record
+                </Link>
             </div>
         </div>
     )

@@ -86,7 +86,7 @@ export default async function handler(req, res) {
 
         // Query paginated records with filters.
         const baseQuery = `
-      SELECT lr.*,
+      SELECT lr.*, lr.any_dpo_or_former_dpo,
         (
           SELECT GROUP_CONCAT(dpo.person_name || '|' || dpo.job_title || '|' || dpo.public_body, '||')
           FROM dpo_entries dpo
@@ -111,31 +111,37 @@ export default async function handler(req, res) {
             PER_PAGE,
             offset,
         ])
-        const parsedRecords = records.map((r) => ({
-            id: r.id,
-            url: r.url,
-            date_published: r.date_published,
-            specific_details: r.specific_details?.slice(0, 1000),
-            intended_results: r.intended_results?.slice(0, 1000),
-            dpo_entries:
-                typeof r.dpos === "string"
-                    ? r.dpos.split("||").map((entry) => {
-                          const [name, job, body] = entry.split("|")
-                          return {
-                              person_name: name,
-                              job_title: job,
-                              public_body: body,
-                          }
-                      })
-                    : [],
-            lobbying_activities:
-                typeof r.activities === "string"
-                    ? r.activities
-                          .split("||")
-                          .map((entry) => entry.trim())
-                          .filter(Boolean)
-                    : [],
-        }))
+        // Use any_dpo_or_former_dpo to set isFormerDPO
+        const parsedRecords = records.map((r) => {
+            let dpo_entries = []
+            if (typeof r.dpos === "string") {
+                dpo_entries = r.dpos.split("||").map((entry) => {
+                    const [name, job, body] = entry.split("|")
+                    return {
+                        person_name: name,
+                        job_title: job,
+                        public_body: body,
+                    }
+                })
+            }
+            return {
+                id: r.id,
+                url: r.url,
+                lobbyist_name: r.lobbyist_name,
+                date_published: r.date_published,
+                specific_details: r.specific_details?.slice(0, 1000),
+                intended_results: r.intended_results?.slice(0, 1000),
+                isFormerDPO: r.any_dpo_or_former_dpo === "Yes",
+                dpo_entries,
+                lobbying_activities:
+                    typeof r.activities === "string"
+                        ? r.activities
+                              .split("||")
+                              .map((entry) => entry.trim())
+                              .filter(Boolean)
+                        : [],
+            }
+        })
 
         // Retrieve all records (unpaginated) to compute unique filter options.
         const allRecordsQuery = `
