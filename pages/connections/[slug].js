@@ -391,6 +391,11 @@ export default function ConnectionsOfficial() {
     // Cache for loaded images and fallback
     const imageCache = React.useRef({})
 
+    const prefersDark =
+        typeof window !== "undefined" &&
+        window.matchMedia &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches
+
     const nodeCanvasObject = (node, ctx, globalScale) => {
         const isVisible = visibleNodeIds.has(
             String(node.id).trim().toLowerCase()
@@ -420,6 +425,7 @@ export default function ConnectionsOfficial() {
                 nodeColor = getLinkColor(link)
             }
         }
+        const isDarkMode = document.documentElement.classList.contains("dark")
         if (node.img) {
             const size = 20
             let img = imageCache.current[node.img]
@@ -444,7 +450,7 @@ export default function ConnectionsOfficial() {
             ctx.font = `${12 / globalScale}px Sans-Serif`
             ctx.textAlign = "center"
             ctx.textBaseline = "top"
-            ctx.fillStyle = "#222"
+            ctx.fillStyle = isDarkMode ? "#eee" : "#222"
             ctx.fillText(node.label || node.id, node.x, node.y + 12)
         } else {
             const size = 2
@@ -455,7 +461,7 @@ export default function ConnectionsOfficial() {
             ctx.font = `${12 / globalScale}px Sans-Serif`
             ctx.textAlign = "center"
             ctx.textBaseline = "top"
-            ctx.fillStyle = "#222"
+            ctx.fillStyle = isDarkMode ? "#eee" : "#222"
             let label = node.label || node.id
             if (count !== null && count > 3) label = `${label} - ${count}`
             ctx.fillText(label, node.x, node.y + 8)
@@ -468,8 +474,8 @@ export default function ConnectionsOfficial() {
             <Head>
                 <title>Connections – {officialSlug.replace(/-/g, " ")}</title>
             </Head>
-            <div className="min-h-screen bg-gray-50">
-                <header className="bg-blue-900 text-white py-4">
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+                <header className="bg-blue-900 dark:bg-gray-800 text-white dark:text-gray-100 py-4">
                     <div className="max-w-6xl mx-auto px-4 text-center">
                         <h1 className="text-3xl font-bold">
                             Connections Visualization
@@ -511,7 +517,7 @@ export default function ConnectionsOfficial() {
                                     onChange={(e) =>
                                         setSelectedYear(e.target.value)
                                     }
-                                    className="border border-gray-300 rounded px-2 py-1"
+                                    className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded px-2 py-1"
                                 >
                                     <option value="All">All</option>
                                     {years.map((year) => (
@@ -530,7 +536,7 @@ export default function ConnectionsOfficial() {
                                     onChange={(e) =>
                                         setSelectedMethod(e.target.value)
                                     }
-                                    className="border border-gray-300 rounded px-2 py-1"
+                                    className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded px-2 py-1"
                                 >
                                     <option value="All">All</option>
                                     {methods.map((method) => (
@@ -547,10 +553,7 @@ export default function ConnectionsOfficial() {
                         className="w-full flex flex-col items-center relative"
                         style={{ zIndex: 10 }}
                     >
-                        <div
-                            className="bg-white border rounded-md shadow-md p-4 mb-4 w-full max-w-2xl relative"
-                            style={{ zIndex: 10 }}
-                        >
+                        <div className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-md shadow-md p-4 mb-4 w-full max-w-2xl relative">
                             <h2 className="text-lg font-semibold mb-2">
                                 Legend
                             </h2>
@@ -571,8 +574,8 @@ export default function ConnectionsOfficial() {
                                             key={cat.label}
                                             className={`flex items-center gap-2 cursor-pointer select-none rounded px-1 py-0.5 transition border border-transparent ${
                                                 selectedCategories.includes(idx)
-                                                    ? "bg-blue-100 border-blue-400"
-                                                    : "hover:bg-gray-100"
+                                                    ? "bg-blue-200 dark:bg-blue-700 border-blue-400 dark:border-blue-500"
+                                                    : "hover:bg-gray-100 dark:hover:bg-gray-700"
                                             }`}
                                         >
                                             <button
@@ -616,7 +619,7 @@ export default function ConnectionsOfficial() {
                                     )
                                 })}
                             </ul>
-                            <div className="mt-2 text-xs text-gray-500">
+                            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                                 Click to filter. CTRL+Click to multi-select.
                                 Click again to reset.
                             </div>
@@ -632,11 +635,11 @@ export default function ConnectionsOfficial() {
                         }}
                     >
                         {loading ? (
-                            <div className="flex items-center justify-center h-full text-lg text-blue-700">
+                            <div className="flex items-center justify-center h-full text-lg text-blue-700 dark:text-blue-400">
                                 Loading...
                             </div>
                         ) : error ? (
-                            <div className="flex items-center justify-center h-full text-red-600">
+                            <div className="flex items-center justify-center h-full text-red-600 dark:text-red-400">
                                 {error}
                             </div>
                         ) : (

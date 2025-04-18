@@ -213,18 +213,13 @@ export default function ChordDiagram({
             .on("mouseout", hideTooltip)
     }, [records, officialsProp, width, height, maxLobbyists])
 
+    const prefersDark =
+        typeof window !== "undefined" &&
+        window.matchMedia &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches
+
     return (
-        <div
-            style={{
-                position: "relative",
-                width: "100%",
-                height: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-            }}
-            className="overflow-x-auto"
-        >
+        <div className="relative w-full h-full flex items-center justify-center overflow-x-auto">
             <svg
                 ref={ref}
                 width={width}
@@ -235,19 +230,14 @@ export default function ChordDiagram({
             />
             {tooltip.visible && (
                 <div
+                    className={`absolute text-sm rounded-md px-3 py-2 max-w-xs pointer-events-none z-50 shadow-lg transition-opacity duration-200 ${
+                        prefersDark
+                            ? "bg-gray-800 text-gray-100"
+                            : "bg-white text-gray-900 border border-gray-300"
+                    }`}
                     style={{
-                        position: "absolute",
                         left: tooltip.x,
                         top: tooltip.y,
-                        background: "rgba(0,0,0,0.85)",
-                        color: "#fff",
-                        padding: "8px 12px",
-                        borderRadius: 6,
-                        pointerEvents: "none",
-                        fontSize: 13,
-                        zIndex: 1000,
-                        maxWidth: 260,
-                        boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
                     }}
                     dangerouslySetInnerHTML={{ __html: tooltip.html }}
                 />

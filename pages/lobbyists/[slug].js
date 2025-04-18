@@ -41,6 +41,8 @@ export async function getServerSideProps({ params, query }) {
     }
 }
 
+// …imports remain unchanged…
+
 export default function LobbyistPage({ lobbyistData }) {
     const router = useRouter()
     const {
@@ -57,7 +59,6 @@ export default function LobbyistPage({ lobbyistData }) {
 
     const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
-    // Setup react-select options for the official filter.
     const officialOptions = [
         { value: "", label: "All Officials" },
         ...officials.map((o) => ({ value: o, label: o })),
@@ -67,7 +68,6 @@ export default function LobbyistPage({ lobbyistData }) {
             (opt) => opt.value === (currentFilters?.officialFilter || "")
         ) || officialOptions[0]
 
-    // Memoize method options and selected values for performance
     const methodOptions = useMemo(
         () => methods.map((m) => ({ value: m, label: m })),
         [methods]
@@ -121,8 +121,8 @@ export default function LobbyistPage({ lobbyistData }) {
             <Head>
                 <title>{`Lobbyist - ${name}`}</title>
             </Head>
-            <div className="min-h-screen bg-gray-100">
-                <header className="bg-blue-900 text-white py-4 shadow">
+            <div className="min-h-screen bg-cb-light-background dark:bg-cb-dark-background text-cb-light-text dark:text-cb-dark-text">
+                <header className="bg-blue-900 dark:bg-gray-800 text-white dark:text-gray-100 py-4 shadow">
                     <div className="max-w-6xl mx-auto px-4 text-center">
                         <h1 className="text-4xl font-bold">{name}</h1>
                         <p className="mt-2 text-lg">
@@ -132,9 +132,10 @@ export default function LobbyistPage({ lobbyistData }) {
                     </div>
                 </header>
                 <main className="max-w-6xl mx-auto px-4 py-8">
-                    <div className="bg-white rounded-md shadow p-4 mb-6 flex flex-col sm:flex-row gap-6 items-center">
-                        <div className="w-64">
-                            <label className="block mb-1 text-sm font-medium text-gray-700">
+                    <div className="bg-white dark:bg-gray-800 rounded-md shadow p-4 mb-6 flex flex-col sm:flex-row gap-6 items-center">
+                        {/* Official filter */}
+                        <div className="w-64 accent-blue-600 dark:accent-blue-400">
+                            <label className="block mb-1 text-sm font-medium text-cb-light-text dark:text-cb-dark-text">
                                 Official
                             </label>
                             <Select
@@ -146,22 +147,26 @@ export default function LobbyistPage({ lobbyistData }) {
                                 isSearchable
                                 placeholder="Search officials..."
                                 styles={{
-                                    control: (provided) => ({
-                                        ...provided,
+                                    control: (base) => ({
+                                        ...base,
+                                        backgroundColor:
+                                            "hsl(var(--cb-light-background))",
                                         borderColor: "#CBD5E0",
+                                        color: "#111",
                                     }),
-                                    menu: (provided) => ({
-                                        ...provided,
+                                    menu: (base) => ({
+                                        ...base,
+                                        backgroundColor: "#fff",
+                                        color: "#111",
                                         zIndex: 9999,
-                                        maxHeight: "300px",
-                                        overflowY: "auto",
-                                        backgroundColor: "white",
                                     }),
                                 }}
                             />
                         </div>
+
+                        {/* Year filter */}
                         <div className="w-32">
-                            <label className="block mb-1 text-sm font-medium text-gray-700">
+                            <label className="block mb-1 text-sm font-medium text-cb-light-text dark:text-cb-dark-text">
                                 Year
                             </label>
                             <select
@@ -169,7 +174,7 @@ export default function LobbyistPage({ lobbyistData }) {
                                 onChange={(e) =>
                                     handleFilterChange("year", e.target.value)
                                 }
-                                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-cb-light-text dark:text-cb-dark-text focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
                                 <option value="">All Years</option>
                                 {years.map((y) => (
@@ -179,8 +184,10 @@ export default function LobbyistPage({ lobbyistData }) {
                                 ))}
                             </select>
                         </div>
-                        <div className="w-64">
-                            <label className="block mb-1 text-sm font-medium text-gray-700">
+
+                        {/* Method filter */}
+                        <div className="w-64 accent-blue-600 dark:accent-blue-400">
+                            <label className="block mb-1 text-sm font-medium text-cb-light-text dark:text-cb-dark-text">
                                 Method
                             </label>
                             <Select
@@ -193,16 +200,18 @@ export default function LobbyistPage({ lobbyistData }) {
                                 menuPlacement="auto"
                                 placeholder="Select methods..."
                                 styles={{
-                                    control: (provided) => ({
-                                        ...provided,
+                                    control: (base) => ({
+                                        ...base,
+                                        backgroundColor:
+                                            "hsl(var(--cb-light-background))",
                                         borderColor: "#CBD5E0",
+                                        color: "#111",
                                     }),
-                                    menu: (provided) => ({
-                                        ...provided,
+                                    menu: (base) => ({
+                                        ...base,
+                                        backgroundColor: "#fff",
+                                        color: "#111",
                                         zIndex: 9999,
-                                        maxHeight: "300px",
-                                        overflowY: "auto",
-                                        backgroundColor: "white",
                                     }),
                                 }}
                                 menuPortalTarget={
@@ -222,7 +231,8 @@ export default function LobbyistPage({ lobbyistData }) {
                             />
                         </div>
                     </div>
-                    <section className="bg-white rounded-md shadow p-4">
+
+                    <section className="bg-white dark:bg-gray-800 rounded-md shadow p-4">
                         <h2 className="text-2xl font-semibold mb-4">
                             Lobbying Records (Page {page} of {totalPages})
                         </h2>
@@ -236,8 +246,12 @@ export default function LobbyistPage({ lobbyistData }) {
                                 ))}
                             </div>
                         ) : (
-                            <p>No records found.</p>
+                            <p className="text-gray-500 dark:text-gray-400">
+                                No records found.
+                            </p>
                         )}
+
+                        {/* Pagination */}
                         <div className="flex flex-wrap items-center gap-2 mt-6">
                             {page > 1 && (
                                 <button
@@ -269,7 +283,7 @@ export default function LobbyistPage({ lobbyistData }) {
                                         onClick={() => handlePageChange(p)}
                                         className={`px-3 py-1 rounded ${
                                             p === page
-                                                ? "bg-blue-700 font-bold"
+                                                ? "bg-blue-700 font-bold text-white"
                                                 : "bg-blue-500 text-white"
                                         }`}
                                     >
@@ -300,6 +314,8 @@ export default function LobbyistPage({ lobbyistData }) {
                                     Next →
                                 </button>
                             )}
+
+                            {/* Go to page */}
                             <form
                                 onSubmit={(e) => {
                                     e.preventDefault()
@@ -323,7 +339,7 @@ export default function LobbyistPage({ lobbyistData }) {
                                     min="1"
                                     max={totalPages}
                                     defaultValue={page}
-                                    className="w-16 border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-16 border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-700 text-cb-light-text dark:text-cb-dark-text focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                                 <button
                                     type="submit"

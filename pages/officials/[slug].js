@@ -143,9 +143,9 @@ export default function OfficialPage({ officialData }) {
             <Head>
                 <title>{`Official - ${name}`}</title>
             </Head>
-            <div className="min-h-screen bg-gray-100">
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
                 {/* Header */}
-                <header className="bg-blue-900 text-white py-4 shadow">
+                <header className="bg-blue-900 dark:bg-gray-800 text-white dark:text-cb-dark-text py-4 shadow">
                     <div className="max-w-6xl mx-auto px-4 text-center">
                         {/* Politician Image if available */}
                         <PoliticianImage slug={slug} name={name} />
@@ -157,15 +157,15 @@ export default function OfficialPage({ officialData }) {
                         {/* Link to Connections Graph */}
                         <a
                             href={`/connections/${slug}`}
-                            className="inline-block mt-4 mx-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded shadow transition"
+                            className="inline-block mt-4 mx-2 px-4 py-2 bg-green-500 dark:bg-green-800 hover:bg-green-600 text-white dark:text-black  rounded shadow transition"
                         >
-                            View Connections Graph
+                            Connections Graph
                         </a>
                         <a
                             href={`/methods/${slug}`}
-                            className="inline-block mt-4 mx-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded shadow transition"
+                            className="inline-block mt-4 mx-2 px-4 py-2 bg-green-500 dark:bg-green-800 hover:bg-green-600 text-white dark:text-black rounded shadow transition"
                         >
-                            View Method Pie
+                            Method Pie
                         </a>
                     </div>
                 </header>
@@ -173,10 +173,10 @@ export default function OfficialPage({ officialData }) {
                 {/* Main Content */}
                 <main className="max-w-6xl mx-auto px-4 py-8">
                     {/* Filters Bar at Top */}
-                    <div className="bg-white rounded-md shadow p-4 mb-6 flex flex-col sm:flex-row gap-6 items-center">
+                    <div className="bg-white dark:bg-gray-800 rounded-md shadow p-4 mb-6 flex flex-col sm:flex-row gap-6 items-center">
                         {/* Lobbyist Filter */}
-                        <div className="w-64">
-                            <label className="block mb-1 text-sm font-medium text-gray-700">
+                        <div className="w-64 accent-blue-600 dark:accent-blue-400">
+                            <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                                 Lobbyist
                             </label>
                             <Select
@@ -188,16 +188,17 @@ export default function OfficialPage({ officialData }) {
                                 isSearchable
                                 placeholder="Search lobbyists..."
                                 styles={{
-                                    control: (provided) => ({
-                                        ...provided,
+                                    control: (base) => ({
+                                        ...base,
+                                        backgroundColor: "var(--cb-bg, white)",
+                                        color: "var(--cb-text, black)",
                                         borderColor: "#CBD5E0",
                                     }),
-                                    menu: (provided) => ({
-                                        ...provided,
+                                    menu: (base) => ({
+                                        ...base,
+                                        backgroundColor: "var(--cb-bg, white)",
+                                        color: "var(--cb-text, black)",
                                         zIndex: 9999,
-                                        maxHeight: "300px",
-                                        overflowY: "auto",
-                                        backgroundColor: "white",
                                     }),
                                 }}
                             />
@@ -205,7 +206,7 @@ export default function OfficialPage({ officialData }) {
 
                         {/* Year Filter */}
                         <div className="w-32">
-                            <label className="block mb-1 text-sm font-medium text-gray-700">
+                            <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                                 Year
                             </label>
                             <select
@@ -213,7 +214,7 @@ export default function OfficialPage({ officialData }) {
                                 onChange={(e) =>
                                     handleFilterChange("year", e.target.value)
                                 }
-                                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
                                 <option value="">All Years</option>
                                 {years.map((y) => (
@@ -225,8 +226,8 @@ export default function OfficialPage({ officialData }) {
                         </div>
 
                         {/* Method Filter (multi-select, Grafana style: only update on close) */}
-                        <div className="w-64">
-                            <label className="block mb-1 text-sm font-medium text-gray-700">
+                        <div className="w-64 accent-blue-600 dark:accent-blue-400">
+                            <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                                 Method
                             </label>
                             <Select
@@ -239,16 +240,17 @@ export default function OfficialPage({ officialData }) {
                                 menuPlacement="auto"
                                 placeholder="Select methods..."
                                 styles={{
-                                    control: (provided) => ({
-                                        ...provided,
+                                    control: (base) => ({
+                                        ...base,
+                                        backgroundColor: "var(--cb-bg, white)",
+                                        color: "var(--cb-text, black)",
                                         borderColor: "#CBD5E0",
                                     }),
-                                    menu: (provided) => ({
-                                        ...provided,
+                                    menu: (base) => ({
+                                        ...base,
+                                        backgroundColor: "var(--cb-bg, white)",
+                                        color: "var(--cb-text, black)",
                                         zIndex: 9999,
-                                        maxHeight: "300px",
-                                        overflowY: "auto",
-                                        backgroundColor: "white",
                                     }),
                                 }}
                                 menuPortalTarget={
@@ -270,7 +272,7 @@ export default function OfficialPage({ officialData }) {
                     </div>
 
                     {/* Lobbying Records Section */}
-                    <section className="bg-white rounded-md shadow p-4">
+                    <section className="bg-white dark:bg-gray-800 rounded-md shadow p-4">
                         <h2 className="text-2xl font-semibold mb-4">
                             Lobbying Records (Page {page} of {totalPages})
                         </h2>
@@ -284,7 +286,9 @@ export default function OfficialPage({ officialData }) {
                                 ))}
                             </div>
                         ) : (
-                            <p>No records found.</p>
+                            <p className="text-gray-600 dark:text-gray-400">
+                                No records found.
+                            </p>
                         )}
 
                         {/* Pagination */}
@@ -373,7 +377,7 @@ export default function OfficialPage({ officialData }) {
                                     min="1"
                                     max={totalPages}
                                     defaultValue={page}
-                                    className="w-16 border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-16 border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                                 <button
                                     type="submit"

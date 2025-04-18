@@ -7,8 +7,8 @@ export default function Home() {
             <Head>
                 <title>Lobbyieng</title>
             </Head>
-            <div className="min-h-screen bg-gray-50">
-                <header className="bg-blue-900 text-white py-4 shadow">
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+                <header className="bg-blue-900 dark:bg-gray-800 text-white dark:text-cb-dark-text py-4 shadow">
                     <div className="max-w-6xl mx-auto px-4 text-center">
                         <h1 className="text-4xl font-bold mb-2">Lobbyieng</h1>
                         <p className="text-lg mb-4">
@@ -38,7 +38,7 @@ export default function Home() {
                     </div>
                 </header>
                 <main className="max-w-3xl mx-auto px-4 py-16 text-center">
-                    <div className="mb-8 p-4 bg-white rounded shadow text-left">
+                    <div className="mb-8 card text-left">
                         <h2 className="text-xl font-bold mb-2">
                             About this project
                         </h2>

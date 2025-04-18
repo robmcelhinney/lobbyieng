@@ -14,21 +14,18 @@ const topOfficialsTitles = [
 
 export async function getServerSideProps() {
     try {
-        // Fetch all periods
         const periodsRes = await fetch("http://localhost:3000/api/periods")
         const periodsJson = periodsRes.ok
             ? await periodsRes.json()
             : { periods: [] }
         const allPeriods = periodsJson.periods || []
-        // Fetch latest period
+
         const latestRes = await fetch(
             "http://localhost:3000/api/periods-latest"
         )
         const latestJson = latestRes.ok ? await latestRes.json() : {}
-        const latestPeriod =
-            latestJson.period ||
-            (allPeriods.length > 0 ? allPeriods[allPeriods.length - 1] : "")
-        // Fetch only officials for the latest period
+        const latestPeriod = latestJson.period || allPeriods.at(-1) || ""
+
         const jobTitlesParam = topOfficialsTitles.join(",")
         const res = await fetch(
             `http://localhost:3000/api/officials?period=${encodeURIComponent(
@@ -44,7 +41,6 @@ export async function getServerSideProps() {
     }
 }
 
-// Helper to deduplicate officials by slug
 function dedupedOfficials(array) {
     return Array.from(new Map(array.map((item) => [item.slug, item])).values())
 }
@@ -54,61 +50,12 @@ export default function Index({
     allPeriods,
     latestPeriod,
 }) {
-    // Show only TDs/An Tánaiste/An Taoiseach.
-    const topOfficials = initialOfficials.filter((o) =>
-        topOfficialsTitles.some((title) => o.job_title?.includes(title))
-    )
-
-    // Build period options from topOfficials.
-    // Sort periods by year, then by month
-    function extractYearMonth(period) {
-        // Assumes format like '1 Jan, 2016 to 30 Apr, 2016'
-        const match = period.match(/(\d{1,2}) (\w+), (\d{4})/)
-        if (!match) return { year: 0, month: 0 }
-        const year = parseInt(match[3], 10)
-        const monthNames = [
-            "Jan",
-            "Feb",
-            "Mar",
-            "Apr",
-            "May",
-            "Jun",
-            "Jul",
-            "Aug",
-            "Sep",
-            "Oct",
-            "Nov",
-            "Dec",
-        ]
-        const month = monthNames.indexOf(match[2]) + 1
-        return { year, month }
-    }
-    const allPeriodsSorted =
-        Array.from(new Set(topOfficials.flatMap((o) => o.periods || []))).sort(
-            (a, b) => {
-                const ay = extractYearMonth(a)
-                const by = extractYearMonth(b)
-                if (ay.year !== by.year) return ay.year - by.year
-                return ay.month - by.month
-            }
-        ) || []
-    // // Default to latest period (assumes ascending order)
-    const defaultPeriod =
-        allPeriodsSorted.length > 0
-            ? allPeriodsSorted[allPeriodsSorted.length - 1]
-            : ""
-
-    // // Default to 'All Periods' (empty string)
-    // const defaultPeriod = ""
-
-    // Filters: Name and Period.
     const [selectedPeriod, setSelectedPeriod] = useState(latestPeriod)
     const [selectedName, setSelectedName] = useState(null)
     const [officials, setOfficials] = useState(initialOfficials)
     const [isLoading, setIsLoading] = useState(false)
 
     useEffect(() => {
-        // Always fetch, even if selectedPeriod is empty (All)
         setIsLoading(true)
         const jobTitlesParam = topOfficialsTitles.join(",")
         const url = selectedPeriod
@@ -124,36 +71,25 @@ export default function Index({
             .finally(() => setIsLoading(false))
     }, [selectedPeriod])
 
-    // Use officials state, not topOfficials (which is from initialOfficials)
     const filtered = officials.filter((o) => {
-        const matchesName = selectedName ? o.name === selectedName.value : true
-        return matchesName
+        return selectedName ? o.name === selectedName.value : true
     })
     const deduped = dedupedOfficials(filtered)
-
-    // react‑select options for the Name filter using deduped official names.
-    const nameOptions = deduped.map((o) => ({
-        value: o.name,
-        label: o.name,
-    }))
+    const nameOptions = deduped.map((o) => ({ value: o.name, label: o.name }))
 
     return (
         <>
             <Head>
                 <title>Lobbyieng - Dáil</title>
             </Head>
-            <div className="min-h-screen bg-gray-50">
-                {/* Loading bar */}
+            <div className="min-h-screen bg-cb-light-background dark:bg-cb-dark-background text-cb-light-text dark:text-cb-dark-text">
                 {isLoading && (
-                    <div className="w-full h-1 bg-blue-200">
-                        <div
-                            className="h-1 bg-blue-600 animate-pulse w-full"
-                            style={{ width: "100%" }}
-                        ></div>
+                    <div className="w-full h-1 bg-blue-200 dark:bg-blue-900">
+                        <div className="h-1 bg-blue-600 dark:bg-blue-400 animate-pulse w-full"></div>
                     </div>
                 )}
-                {/* Header */}
-                <header className="bg-blue-900 text-white py-4 shadow">
+
+                <header className="bg-blue-900 dark:bg-gray-800 text-white dark:text-gray-100 py-4 shadow">
                     <div className="max-w-6xl mx-auto px-4 text-center">
                         <h1 className="text-4xl font-bold">
                             Elected Officials – Lobbying Data
@@ -164,13 +100,10 @@ export default function Index({
                     </div>
                 </header>
 
-                {/* Main Content */}
                 <main className="max-w-6xl mx-auto px-4 py-8">
-                    {/* Filters Bar at Top */}
-                    <div className="bg-white rounded-md shadow p-4 mb-6 flex flex-col sm:flex-row gap-6 items-center">
-                        {/* Period Filter */}
+                    <div className="bg-white dark:bg-gray-800 rounded-md shadow-md p-6 mb-6 flex flex-col sm:flex-row gap-6 items-center">
                         <div className="w-50">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Period
                             </label>
                             <select
@@ -178,7 +111,7 @@ export default function Index({
                                 onChange={(e) =>
                                     setSelectedPeriod(e.target.value)
                                 }
-                                className="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 shadow-sm bg-white dark:bg-gray-700 text-cb-light-text dark:text-cb-dark-text focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
                                 <option value="">All Periods</option>
                                 {allPeriods.map((period) => (
@@ -189,35 +122,34 @@ export default function Index({
                             </select>
                         </div>
 
-                        {/* Name Filter using react-select */}
-                        <div className="w-64">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <div className="w-64 accent-blue-600 dark:accent-blue-400">
+                            <label className="block text-sm font-medium text-cb-light-text dark:text-cb-dark-text mb-1">
                                 Name
                             </label>
                             <Select
                                 options={nameOptions}
                                 value={selectedName}
-                                onChange={(option) => setSelectedName(option)}
+                                onChange={setSelectedName}
                                 isClearable
                                 placeholder="Search by name..."
                                 styles={{
-                                    control: (provided) => ({
-                                        ...provided,
+                                    control: (base) => ({
+                                        ...base,
+                                        backgroundColor:
+                                            "hsl(var(--cb-light-background))",
                                         borderColor: "#CBD5E0",
-                                        boxShadow: "none",
+                                        color: "#111",
                                     }),
-                                    menu: (provided) => ({
-                                        ...provided,
+                                    menu: (base) => ({
+                                        ...base,
+                                        backgroundColor: "#fff",
+                                        color: "#111",
                                         zIndex: 9999,
-                                        maxHeight: "300px",
-                                        overflowY: "auto",
-                                        backgroundColor: "white",
                                     }),
                                 }}
                             />
                         </div>
 
-                        {/* Clear Filters Button */}
                         {(selectedPeriod || selectedName) && (
                             <div>
                                 <button
@@ -225,7 +157,7 @@ export default function Index({
                                         setSelectedPeriod("")
                                         setSelectedName(null)
                                     }}
-                                    className="text-red-600 underline text-sm"
+                                    className="text-red-600 dark:text-red-400 underline text-sm"
                                 >
                                     Clear Filters
                                 </button>
@@ -233,14 +165,13 @@ export default function Index({
                         )}
                     </div>
 
-                    {/* Officials Results */}
-                    <section className="bg-white rounded-md shadow p-6">
+                    <section className="bg-white dark:bg-gray-800 rounded-md shadow p-6">
                         <h2 className="text-2xl font-semibold mb-4">
                             Officials ({isLoading ? "..." : deduped.length}{" "}
                             results)
                         </h2>
                         {isLoading ? (
-                            <div className="text-center text-blue-600 py-8">
+                            <div className="text-center text-blue-600 dark:text-blue-300 py-8">
                                 Loading officials...
                             </div>
                         ) : deduped.length > 0 ? (
@@ -248,17 +179,17 @@ export default function Index({
                                 {deduped.map((official) => (
                                     <li
                                         key={official.slug}
-                                        className="border rounded-md p-4 hover:shadow transition"
+                                        className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md p-4 hover:shadow transition"
                                     >
                                         <Link
                                             legacyBehavior
                                             href={`/officials/${official.slug}`}
                                         >
                                             <a>
-                                                <h3 className="font-bold text-gray-900">
+                                                <h3 className="font-bold text-cb-light-text dark:text-cb-dark-text">
                                                     {official.name}
                                                 </h3>
-                                                <p className="text-sm text-gray-600">
+                                                <p className="text-sm text-gray-600 dark:text-gray-400">
                                                     {official.job_title}
                                                 </p>
                                             </a>
@@ -267,7 +198,7 @@ export default function Index({
                                 ))}
                             </ul>
                         ) : (
-                            <p className="text-center text-gray-500">
+                            <p className="text-center text-gray-500 dark:text-gray-400">
                                 No results found.
                             </p>
                         )}

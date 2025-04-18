@@ -3,6 +3,7 @@ import Head from "next/head"
 import { useRouter } from "next/router"
 import { Chart, ArcElement, Tooltip, Legend } from "chart.js"
 import { Pie } from "react-chartjs-2"
+
 Chart.register(ArcElement, Tooltip, Legend)
 
 export default function MethodsPieChartOfficial() {
@@ -23,7 +24,6 @@ export default function MethodsPieChartOfficial() {
                 const res = await fetch(`/api/officials/${slug}/methods`)
                 if (!res.ok) throw new Error("Failed to fetch methods")
                 const data = await res.json()
-                // Use the methods/counts directly from the API response
                 setMethodCounts(data.methods || {})
                 setName(data.name || "")
             } catch (err) {
@@ -63,8 +63,8 @@ export default function MethodsPieChartOfficial() {
                         : "Lobbying Methods Breakdown"}
                 </title>
             </Head>
-            <div className="min-h-screen bg-gray-50">
-                <header className="bg-blue-900 text-white py-4">
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+                <header className="bg-blue-900 dark:bg-gray-800 text-white dark:text-gray-100 py-4 shadow">
                     <div className="max-w-3xl mx-auto px-4 text-center">
                         <h1 className="text-3xl font-bold">
                             {name
@@ -78,11 +78,15 @@ export default function MethodsPieChartOfficial() {
                     </div>
                 </header>
                 <main className="max-w-3xl mx-auto px-4 py-8 flex flex-col gap-8">
-                    <div className="bg-white border rounded-md shadow-md p-4 flex flex-col items-center">
+                    <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-md p-6 flex flex-col items-center">
                         {loading ? (
-                            <div className="text-blue-700">Loading...</div>
+                            <div className="text-blue-700 dark:text-blue-300">
+                                Loading...
+                            </div>
                         ) : error ? (
-                            <div className="text-red-600">{error}</div>
+                            <div className="text-red-600 dark:text-red-400">
+                                {error}
+                            </div>
                         ) : (
                             <div style={{ width: 360, height: 360 }}>
                                 <Pie ref={pieRef} data={chartData} />

@@ -36,49 +36,33 @@ export default function LobbyingCard({ record }) {
             .replace(/\s+/g, "-")
 
     return (
-        <div
-            style={{
-                border: "1px solid #ccc",
-                borderRadius: "8px",
-                padding: "1rem",
-                marginBottom: "1rem",
-                boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
-                background: "#fff",
-            }}
-        >
-            <h3 style={{ marginBottom: "0.5rem", fontSize: "1.25rem" }}>
+        <div className="border border-gray-300 dark:border-gray-600 rounded-lg p-4 mb-4 shadow-sm bg-white dark:bg-gray-700 text-cb-light-text dark:text-cb-dark-text">
+            <h3 className="text-xl font-semibold mb-2">
                 <Link
                     href={`/lobbyists/${slugify(lobbyist_name)}`}
-                    className="text-blue-700 underline hover:text-blue-900 transition-colors"
+                    className="text-blue-700 dark:text-blue-400 hover:underline"
                 >
                     {lobbyist_name}
                 </Link>
             </h3>
-            <p style={{ fontStyle: "italic", marginBottom: "0.5rem" }}>
-                {formattedDate}
-            </p>
+
+            <p className="italic text-sm mb-2">{formattedDate}</p>
 
             {intended_results && (
-                <p style={{ marginBottom: "0.5rem" }}>
+                <p className="mb-2">
                     <strong>Intent:</strong> {intended_results}
                 </p>
             )}
 
             {specific_details && (
-                <p style={{ marginBottom: "0.5rem" }}>
+                <p className="mb-2">
                     <strong>Details:</strong> {shownDetails}
                     {detailsTooLong && (
                         <>
                             ...{" "}
                             <button
                                 onClick={() => setExpanded(!expanded)}
-                                style={{
-                                    border: "none",
-                                    background: "none",
-                                    color: "blue",
-                                    cursor: "pointer",
-                                    padding: 0,
-                                }}
+                                className="text-blue-600 dark:text-blue-300 underline focus:outline-none ml-1"
                             >
                                 {expanded ? "Show less" : "Read more"}
                             </button>
@@ -88,11 +72,14 @@ export default function LobbyingCard({ record }) {
             )}
 
             {parsedDPOs.length > 0 && (
-                <p style={{ marginBottom: "0.5rem" }}>
+                <p className="mb-2">
                     <strong>Officials:</strong>{" "}
                     {parsedDPOs.map((name, i) => (
                         <span key={i}>
-                            <Link href={`/officials/${slugify(name)}`}>
+                            <Link
+                                href={`/officials/${slugify(name)}`}
+                                className="underline hover:text-blue-700 dark:hover:text-blue-300"
+                            >
                                 {name}
                             </Link>
                             {i < parsedDPOs.length - 1 ? ", " : ""}
@@ -102,7 +89,7 @@ export default function LobbyingCard({ record }) {
             )}
 
             {parsedActivities.length > 0 && (
-                <p style={{ marginBottom: "0.5rem" }}>
+                <p className="mb-2">
                     <strong>Methods:</strong> {parsedActivities.join(", ")}
                 </p>
             )}

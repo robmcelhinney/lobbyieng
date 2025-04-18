@@ -72,8 +72,8 @@ export default function ChordPage() {
             <Head>
                 <title>Compare Two Officials – Chord Diagram</title>
             </Head>
-            <div className="min-h-screen bg-gray-50">
-                <header className="bg-blue-900 text-white py-4">
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+                <header className="bg-blue-900 dark:bg-gray-800 text-white dark:text-gray-100 py-4">
                     <div className="max-w-6xl mx-auto px-4 text-center">
                         <h1 className="text-3xl font-bold">
                             Compare Two Officials
@@ -85,7 +85,7 @@ export default function ChordPage() {
                     </div>
                 </header>
                 <main className="max-w-6xl mx-auto px-4 py-8">
-                    <div className="mb-8 p-4 bg-white rounded shadow text-left">
+                    <div className="mb-8 p-4 bg-white dark:bg-gray-800 rounded shadow text-left">
                         <h2 className="text-xl font-bold mb-2">
                             About the Chord Diagram
                         </h2>
@@ -101,7 +101,7 @@ export default function ChordPage() {
                             lobbyists shown.
                         </p>
                     </div>
-                    <div className="bg-white border rounded-md shadow-md p-8 flex flex-col items-center">
+                    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-md p-8 flex flex-col items-center">
                         <div className="flex flex-col md:flex-row gap-4 mb-6 justify-center">
                             <div>
                                 <label className="block mb-1 font-semibold">
@@ -117,17 +117,52 @@ export default function ChordPage() {
                                     isSearchable
                                     placeholder="Select official..."
                                     styles={{
-                                        control: (provided) => ({
-                                            ...provided,
-                                            borderColor: "#CBD5E0",
-                                            boxShadow: "none",
+                                        control: (base, state) => ({
+                                            ...base,
+                                            backgroundColor: state.isFocused
+                                                ? "#1f2937" // dark:bg-gray-800
+                                                : "#374151", // dark:bg-gray-700
+                                            borderColor: state.isFocused
+                                                ? "#3b82f6"
+                                                : "#4b5563", // blue-500 or gray-600
+                                            color: "#f9fafb", // text-gray-100
+                                            boxShadow: state.isFocused
+                                                ? "0 0 0 1px #3b82f6"
+                                                : "none",
+                                            "&:hover": {
+                                                borderColor: "#3b82f6",
+                                            },
                                         }),
-                                        menu: (provided) => ({
-                                            ...provided,
+                                        menu: (base) => ({
+                                            ...base,
+                                            backgroundColor: "#1f2937", // dark:bg-gray-800
+                                            color: "#f9fafb",
                                             zIndex: 9999,
-                                            maxHeight: "300px",
-                                            overflowY: "auto",
-                                            backgroundColor: "white",
+                                        }),
+                                        option: (base, state) => ({
+                                            ...base,
+                                            backgroundColor: state.isFocused
+                                                ? "#2563eb" // blue-600 hover
+                                                : "transparent",
+                                            color: state.isFocused
+                                                ? "#fff"
+                                                : "#f9fafb",
+                                            cursor: "pointer",
+                                            "&:active": {
+                                                backgroundColor: "#1d4ed8", // blue-700
+                                            },
+                                        }),
+                                        singleValue: (base) => ({
+                                            ...base,
+                                            color: "#f9fafb", // text-gray-100
+                                        }),
+                                        input: (base) => ({
+                                            ...base,
+                                            color: "#f9fafb",
+                                        }),
+                                        placeholder: (base) => ({
+                                            ...base,
+                                            color: "#9ca3af", // text-gray-400
                                         }),
                                     }}
                                 />
@@ -146,17 +181,52 @@ export default function ChordPage() {
                                     isSearchable
                                     placeholder="Select official..."
                                     styles={{
-                                        control: (provided) => ({
-                                            ...provided,
-                                            borderColor: "#CBD5E0",
-                                            boxShadow: "none",
+                                        control: (base, state) => ({
+                                            ...base,
+                                            backgroundColor: state.isFocused
+                                                ? "#1f2937" // dark:bg-gray-800
+                                                : "#374151", // dark:bg-gray-700
+                                            borderColor: state.isFocused
+                                                ? "#3b82f6"
+                                                : "#4b5563", // blue-500 or gray-600
+                                            color: "#f9fafb", // text-gray-100
+                                            boxShadow: state.isFocused
+                                                ? "0 0 0 1px #3b82f6"
+                                                : "none",
+                                            "&:hover": {
+                                                borderColor: "#3b82f6",
+                                            },
                                         }),
-                                        menu: (provided) => ({
-                                            ...provided,
+                                        menu: (base) => ({
+                                            ...base,
+                                            backgroundColor: "#1f2937", // dark:bg-gray-800
+                                            color: "#f9fafb",
                                             zIndex: 9999,
-                                            maxHeight: "300px",
-                                            overflowY: "auto",
-                                            backgroundColor: "white",
+                                        }),
+                                        option: (base, state) => ({
+                                            ...base,
+                                            backgroundColor: state.isFocused
+                                                ? "#2563eb" // blue-600 hover
+                                                : "transparent",
+                                            color: state.isFocused
+                                                ? "#fff"
+                                                : "#f9fafb",
+                                            cursor: "pointer",
+                                            "&:active": {
+                                                backgroundColor: "#1d4ed8", // blue-700
+                                            },
+                                        }),
+                                        singleValue: (base) => ({
+                                            ...base,
+                                            color: "#f9fafb", // text-gray-100
+                                        }),
+                                        input: (base) => ({
+                                            ...base,
+                                            color: "#f9fafb",
+                                        }),
+                                        placeholder: (base) => ({
+                                            ...base,
+                                            color: "#9ca3af", // text-gray-400
                                         }),
                                     }}
                                 />
@@ -172,7 +242,7 @@ export default function ChordPage() {
                                 </label>
                                 <select
                                     id="startYear"
-                                    className="border px-2 py-1 rounded"
+                                    className="border border-gray-300 dark:border-gray-600 px-2 py-1 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                                     value={startYear}
                                     onChange={(e) =>
                                         setStartYear(Number(e.target.value))
@@ -194,7 +264,7 @@ export default function ChordPage() {
                                 </label>
                                 <select
                                     id="endYear"
-                                    className="border px-2 py-1 rounded"
+                                    className="border border-gray-300 dark:border-gray-600 px-2 py-1 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                                     value={endYear}
                                     onChange={(e) =>
                                         setEndYear(Number(e.target.value))
@@ -224,7 +294,7 @@ export default function ChordPage() {
                                 onChange={(e) =>
                                     setMaxLobbyists(Number(e.target.value))
                                 }
-                                className="w-64"
+                                className="w-64 accent-blue-600 dark:accent-blue-400"
                             />
                         </div>
                         {selected1 && selected2 && selected1 === selected2 && (
@@ -242,7 +312,7 @@ export default function ChordPage() {
                                 />
                             )}
                         </div>
-                        <p className="mt-4 text-gray-600 text-sm">
+                        <p className="mt-4 text-gray-600 dark:text-gray-300 text-sm">
                             This diagram shows the relationships between
                             lobbyists and the two selected officials. The
                             thickness of each ribbon represents the number of

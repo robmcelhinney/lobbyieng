@@ -4,21 +4,18 @@ import Select from "react-select"
 import Head from "next/head"
 
 export async function getServerSideProps() {
-    // Get the most recent period directly from the database
     let latestPeriod = null
     try {
-        // Use a direct DB query to avoid unnecessary API calls
         const res = await fetch("http://localhost:3000/api/periods-latest")
         if (!res.ok) throw new Error("Failed to fetch latest period")
         const { period } = await res.json()
         latestPeriod = period
     } catch (err) {
-        // Fallback to hardcoded value if needed
         latestPeriod = "1 Jan, 2025 to 30 Apr, 2025"
         console.error("Error determining latest period:", err)
     }
+
     try {
-        // Fetch only officials for the latest period
         const res = await fetch(
             `http://localhost:3000/api/officials?period=${encodeURIComponent(
                 latestPeriod
@@ -34,32 +31,26 @@ export async function getServerSideProps() {
 }
 
 export default function OfficialsPage({ officials: initialOfficials }) {
-    // Job Title Filter
     const [selectedTitles, setSelectedTitles] = useState(new Set())
     const [dropdownOpen, setDropdownOpen] = useState(false)
     const [titleSearchInput, setTitleSearchInput] = useState("")
-    // Period Filter
     const [allPeriods, setAllPeriods] = useState([])
     const [selectedPeriod, setSelectedPeriod] = useState("")
     const [officials, setOfficials] = useState(initialOfficials)
-    // Name Filter
     const [selectedName, setSelectedName] = useState(null)
     const [isLoading, setIsLoading] = useState(false)
 
-    // Fetch all periods on mount
     useEffect(() => {
         fetch("/api/periods")
             .then((res) => res.json())
             .then((data) => {
-                if (data.periods && data.periods.length > 0) {
+                if (data.periods?.length) {
                     setAllPeriods(data.periods)
-                    // Default to latest period (last in sorted list)
-                    setSelectedPeriod(data.periods[data.periods.length - 1])
+                    setSelectedPeriod(data.periods.at(-1))
                 }
             })
     }, [])
 
-    // Always fetch, even if selectedPeriod is empty (All)
     useEffect(() => {
         setIsLoading(true)
         const url = selectedPeriod
@@ -67,11 +58,10 @@ export default function OfficialsPage({ officials: initialOfficials }) {
             : `/api/officials?period=All`
         fetch(url)
             .then((res) => res.json())
-            .then((data) => setOfficials(data))
+            .then(setOfficials)
             .finally(() => setIsLoading(false))
     }, [selectedPeriod])
 
-    // Unique job titles (remove 'All' option)
     const uniqueTitles = Array.from(
         new Set(
             officials
@@ -81,14 +71,12 @@ export default function OfficialsPage({ officials: initialOfficials }) {
         )
     )
 
-    // Toggle job title filter (no 'All' logic)
     const toggleTitle = (title) => {
         const updated = new Set(selectedTitles)
         updated.has(title) ? updated.delete(title) : updated.add(title)
         setSelectedTitles(updated)
     }
 
-    // Dropdown close on outside click
     const dropdownRef = useRef(null)
     useEffect(() => {
         const handleClickOutside = (e) => {
@@ -100,50 +88,35 @@ export default function OfficialsPage({ officials: initialOfficials }) {
             }
         }
         document.addEventListener("mousedown", handleClickOutside)
-        return () => {
+        return () =>
             document.removeEventListener("mousedown", handleClickOutside)
-        }
     }, [])
 
-    // Filtering
     const filtered = officials.filter((o) => {
-        const matchesName = selectedName ? o.name === selectedName.value : true
-        const matchesTitle =
+        const nameMatch = selectedName ? o.name === selectedName.value : true
+        const titleMatch =
             selectedTitles.size === 0 ||
-            (o.job_title &&
-                [...selectedTitles].some((title) =>
-                    o.job_title.includes(title)
-                ))
-        // Remove matchesPeriod check: API already filters by period
-        return matchesName && matchesTitle
+            [...selectedTitles].some((title) => o.job_title?.includes(title))
+        return nameMatch && titleMatch
     })
 
     const deduped = Array.from(
         new Map(filtered.map((o) => [o.slug, o])).values()
     )
-
-    // react-select options for the Name filter using deduped official names.
-    const nameOptions = deduped.map((o) => ({
-        value: o.name,
-        label: o.name,
-    }))
+    const nameOptions = deduped.map((o) => ({ value: o.name, label: o.name }))
 
     return (
         <>
             <Head>
                 <title>Lobbyieng - All Officials</title>
             </Head>
-            <div className="min-h-screen bg-gray-50">
-                {/* Loading bar */}
+            <div className="min-h-screen bg-cb-light-background dark:bg-cb-dark-background text-cb-light-text dark:text-cb-dark-text">
                 {isLoading && (
-                    <div className="w-full h-1 bg-blue-200">
-                        <div
-                            className="h-1 bg-blue-600 animate-pulse w-full"
-                            style={{ width: "100%" }}
-                        ></div>
+                    <div className="w-full h-1 bg-blue-200 dark:bg-blue-900">
+                        <div className="h-1 bg-blue-600 dark:bg-blue-400 animate-pulse w-full"></div>
                     </div>
                 )}
-                <header className="bg-blue-900 text-white py-4 shadow">
+                <header className="bg-blue-900 dark:bg-gray-800 text-white dark:text-cb-dark-text py-4 shadow">
                     <div className="max-w-6xl mx-auto px-4 text-center">
                         <h1 className="text-4xl font-bold">
                             All Elected Officials
@@ -155,25 +128,25 @@ export default function OfficialsPage({ officials: initialOfficials }) {
                     </div>
                 </header>
                 <main className="max-w-6xl mx-auto px-4 py-8">
-                    <div className="bg-white rounded-md shadow-md p-6 mb-6">
+                    <div className="bg-white dark:bg-gray-800 rounded-md shadow-md p-6 mb-6">
                         <div className="flex flex-wrap gap-6">
-                            {/* Job Title Filter (Dropdown) */}
+                            {/* Job Title Filter */}
                             <div className="relative" ref={dropdownRef}>
-                                <label className="block mb-1 text-sm font-medium text-gray-700">
+                                <label className="block mb-1 text-sm font-medium text-cb-light-text dark:text-cb-dark-text">
                                     Job Title
                                 </label>
                                 <button
                                     onClick={() =>
                                         setDropdownOpen(!dropdownOpen)
                                     }
-                                    className="w-64 border border-gray-300 rounded-md px-4 py-2 text-left bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-64 border border-gray-300 dark:border-gray-600 rounded-md px-4 py-2 text-left bg-white dark:bg-gray-700 text-cb-light-text dark:text-cb-dark-text shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 >
                                     {selectedTitles.size
                                         ? [...selectedTitles].join(", ")
                                         : "Filter by Job Title"}
                                 </button>
                                 {dropdownOpen && (
-                                    <div className="absolute mt-2 w-64 max-h-64 overflow-y-auto bg-white border border-gray-300 rounded-md shadow-lg z-10 p-3 space-y-1">
+                                    <div className="absolute mt-2 w-64 max-h-64 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg z-10 p-3 space-y-1">
                                         <input
                                             type="text"
                                             placeholder="Search titles..."
@@ -183,14 +156,14 @@ export default function OfficialsPage({ officials: initialOfficials }) {
                                                     e.target.value
                                                 )
                                             }
-                                            className="w-full px-2 py-1 border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            className="w-full px-2 py-1 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-cb-light-text dark:text-cb-dark-text focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         />
                                         <div className="text-right text-sm">
                                             <button
                                                 onClick={() =>
                                                     setSelectedTitles(new Set())
                                                 }
-                                                className="text-red-500 hover:underline"
+                                                className="text-red-500 dark:text-red-400 hover:underline"
                                             >
                                                 Clear
                                             </button>
@@ -206,7 +179,7 @@ export default function OfficialsPage({ officials: initialOfficials }) {
                                             .map((title) => (
                                                 <label
                                                     key={title}
-                                                    className="block text-sm cursor-pointer"
+                                                    className="block text-sm font-medium text-cb-light-text dark:text-cb-dark-text mb-1"
                                                 >
                                                     <input
                                                         type="checkbox"
@@ -226,7 +199,7 @@ export default function OfficialsPage({ officials: initialOfficials }) {
                             </div>
                             {/* Period Filter */}
                             <div className="w-50">
-                                <label className="block mb-1 text-sm font-medium text-gray-700">
+                                <label className="block mb-1 text-sm font-medium text-cb-light-text dark:text-cb-dark-text">
                                     Period
                                 </label>
                                 <select
@@ -234,7 +207,7 @@ export default function OfficialsPage({ officials: initialOfficials }) {
                                     onChange={(e) =>
                                         setSelectedPeriod(e.target.value)
                                     }
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-cb-light-text dark:text-cb-dark-text focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 >
                                     <option value="">All Periods</option>
                                     {allPeriods.map((period) => (
@@ -244,43 +217,43 @@ export default function OfficialsPage({ officials: initialOfficials }) {
                                     ))}
                                 </select>
                             </div>
-                            {/* Name Filter using react-select */}
-                            <div className="w-64">
-                                <label className="block mb-1 text-sm font-medium text-gray-700">
+                            {/* Name Filter */}
+                            <div className="w-64 accent-blue-600 dark:accent-blue-400">
+                                <label className="block mb-1 text-sm font-medium text-cb-light-text dark:text-cb-dark-text">
                                     Name
                                 </label>
                                 <Select
                                     options={nameOptions}
                                     value={selectedName}
-                                    onChange={(option) =>
-                                        setSelectedName(option)
-                                    }
+                                    onChange={setSelectedName}
                                     isClearable
                                     placeholder="Search by name..."
                                     styles={{
-                                        control: (provided) => ({
-                                            ...provided,
-                                            borderColor: "gray",
+                                        control: (base) => ({
+                                            ...base,
+                                            backgroundColor:
+                                                "hsl(var(--cb-light-background))",
+                                            borderColor: "#CBD5E0",
+                                            color: "#111",
                                         }),
-                                        menu: (provided) => ({
-                                            ...provided,
+                                        menu: (base) => ({
+                                            ...base,
+                                            backgroundColor: "#fff",
+                                            color: "#111",
                                             zIndex: 9999,
-                                            maxHeight: "300px",
-                                            overflowY: "auto",
-                                            backgroundColor: "white",
                                         }),
                                     }}
                                 />
                             </div>
                         </div>
                     </div>
-                    <div className="bg-white rounded-md shadow-md p-6">
+                    <div className="bg-white dark:bg-gray-800 rounded-md shadow-md p-6">
                         <h2 className="text-2xl font-semibold mb-4">
                             Officials ({isLoading ? "..." : deduped.length}{" "}
                             results)
                         </h2>
                         {isLoading ? (
-                            <div className="text-center text-blue-600 py-8">
+                            <div className="text-center text-blue-600 dark:text-blue-300 py-8">
                                 Loading officials...
                             </div>
                         ) : deduped.length > 0 ? (
@@ -288,17 +261,17 @@ export default function OfficialsPage({ officials: initialOfficials }) {
                                 {deduped.map((official) => (
                                     <li
                                         key={official.slug}
-                                        className="border rounded-md p-4 hover:shadow transition"
+                                        className="border border-gray-300 dark:border-gray-600 rounded-md p-4 bg-white dark:bg-gray-700 hover:shadow transition"
                                     >
                                         <Link
                                             legacyBehavior
                                             href={`/officials/${official.slug}`}
                                         >
                                             <a>
-                                                <h3 className="font-bold text-gray-900">
+                                                <h3 className="font-bold text-cb-light-text dark:text-cb-dark-text">
                                                     {official.name}
                                                 </h3>
-                                                <p className="text-sm text-gray-600">
+                                                <p className="text-sm text-gray-600 dark:text-gray-400">
                                                     {official.job_title}
                                                 </p>
                                             </a>
@@ -307,7 +280,7 @@ export default function OfficialsPage({ officials: initialOfficials }) {
                                 ))}
                             </ul>
                         ) : (
-                            <p className="text-center text-gray-500">
+                            <p className="text-center text-gray-500 dark:text-gray-400">
                                 No results found.
                             </p>
                         )}
