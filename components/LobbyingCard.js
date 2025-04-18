@@ -3,12 +3,14 @@ import Link from "next/link"
 
 export default function LobbyingCard({ record }) {
     const {
-        lobbying_activities = [],
         lobbyist_name,
         date_published,
         specific_details,
         intended_results,
-        dpos_lobbied,
+        dpo_entries = [],
+        lobbying_activities = [],
+        isFormerDPO,
+        url,
     } = record
 
     const [expanded, setExpanded] = useState(false)
@@ -19,10 +21,10 @@ export default function LobbyingCard({ record }) {
         ? specific_details
         : specific_details?.slice(0, 300)
 
-    const parsedDPOs = (dpos_lobbied || "")
-        .split("::")
-        .map((entry) => entry.split("|")[0]?.trim())
-        .filter(Boolean)
+    // Derive official names from dpo_entries
+    const parsedDPOs = Array.isArray(dpo_entries)
+        ? dpo_entries.map((d) => d.person_name).filter(Boolean)
+        : []
 
     const parsedActivities = Array.isArray(lobbying_activities)
         ? lobbying_activities.filter(Boolean)
@@ -33,6 +35,7 @@ export default function LobbyingCard({ record }) {
             .normalize("NFD")
             .replace(/\p{Diacritic}/gu, "")
             .toLowerCase()
+            .trim()
             .replace(/\s+/g, "-")
 
     return (
@@ -45,6 +48,12 @@ export default function LobbyingCard({ record }) {
                     {lobbyist_name}
                 </Link>
             </h3>
+
+            {isFormerDPO && (
+                <span className="inline-flex items-center px-2 py-1 text-xs font-semibold text-red-800 bg-red-100 rounded-full dark:bg-red-900 dark:text-red-200">
+                    Former DPO
+                </span>
+            )}
 
             <p className="italic text-sm mb-2">{formattedDate}</p>
 
@@ -93,6 +102,12 @@ export default function LobbyingCard({ record }) {
                     <strong>Methods:</strong> {parsedActivities.join(", ")}
                 </p>
             )}
+
+            <div className="mt-2">
+                <Link href={url} className="text-blue-600 hover:underline">
+                    View Full Record
+                </Link>
+            </div>
         </div>
     )
 }

@@ -195,6 +195,9 @@ export default async function handler(req, res) {
             date_published: r.date_published,
             specific_details: r.specific_details?.slice(0, 1000),
             intended_results: r.intended_results?.slice(0, 1000),
+            // new fields
+            any_dpo_or_former_dpo: r.any_dpo_or_former_dpo,
+            isFormerDPO: r.any_dpo_or_former_dpo === "Yes",
             dpo_entries:
                 typeof r.dpos === "string"
                     ? r.dpos.split("||").map((entry) => {
