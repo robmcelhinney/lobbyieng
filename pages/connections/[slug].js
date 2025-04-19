@@ -71,7 +71,7 @@ export default function ConnectionsOfficial() {
         const centralNode = graphData.nodes.find((n) => n.group === 1)
         if (centralNode) ids.add(String(centralNode.id).trim().toLowerCase())
         return ids
-    }, [graphData, selectedCategories])
+    }, [graphData, selectedCategories, LEGEND_CATEGORIES])
 
     const filteredGraphData = React.useMemo(() => {
         if (!graphData || !graphData.links) return graphData
@@ -84,7 +84,7 @@ export default function ConnectionsOfficial() {
             )
         )
         return { nodes: graphData.nodes, links: filteredLinks }
-    }, [graphData, selectedCategories])
+    }, [graphData, selectedCategories, LEGEND_CATEGORIES])
 
     const handleLegendClick = (idx, event) => {
         if (event.ctrlKey || event.metaKey) {
@@ -390,11 +390,6 @@ export default function ConnectionsOfficial() {
 
     // Cache for loaded images and fallback
     const imageCache = React.useRef({})
-
-    const prefersDark =
-        typeof window !== "undefined" &&
-        window.matchMedia &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches
 
     const nodeCanvasObject = (node, ctx, globalScale) => {
         const isVisible = visibleNodeIds.has(
