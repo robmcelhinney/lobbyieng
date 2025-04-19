@@ -26,9 +26,25 @@ export default function LobbyingCard({ record }) {
         ? dpo_entries.map((d) => d.person_name).filter(Boolean)
         : []
 
+    // Show less / read more for Officials
+    const [officialsExpanded, setOfficialsExpanded] = useState(false)
+    const officialsLimit = 8
+    const shownOfficials = officialsExpanded
+        ? parsedDPOs
+        : parsedDPOs.slice(0, officialsLimit)
+    const hasMoreOfficials = parsedDPOs.length > officialsLimit
+
     const parsedActivities = Array.isArray(lobbying_activities)
         ? lobbying_activities.filter(Boolean)
         : []
+
+    // Show less / read more for Methods
+    const [methodsExpanded, setMethodsExpanded] = useState(false)
+    const methodsLimit = 3
+    const shownMethods = methodsExpanded
+        ? parsedActivities
+        : parsedActivities.slice(0, methodsLimit)
+    const hasMoreMethods = parsedActivities.length > methodsLimit
 
     const slugify = (name) =>
         name
@@ -78,7 +94,7 @@ export default function LobbyingCard({ record }) {
                     <strong>Details:</strong> {shownDetails}
                     {detailsTooLong && (
                         <>
-                            ...{" "}
+                            {expanded ? ". " : ", ... "}
                             <button
                                 onClick={() => setExpanded(!expanded)}
                                 className="text-blue-600 dark:text-blue-300 underline focus:outline-none ml-1"
@@ -93,7 +109,7 @@ export default function LobbyingCard({ record }) {
             {parsedDPOs.length > 0 && (
                 <p className="mb-2">
                     <strong>Officials:</strong>{" "}
-                    {parsedDPOs.map((name, i) => (
+                    {shownOfficials.map((name, i) => (
                         <span key={i}>
                             <Link
                                 href={`/officials/${slugify(name)}`}
@@ -101,15 +117,41 @@ export default function LobbyingCard({ record }) {
                             >
                                 {name}
                             </Link>
-                            {i < parsedDPOs.length - 1 ? ", " : ""}
+                            {i < shownOfficials.length - 1 ? ", " : ""}
                         </span>
                     ))}
+                    {hasMoreOfficials && (
+                        <>
+                            {officialsExpanded ? ". " : ", ... "}
+                            <button
+                                onClick={() =>
+                                    setOfficialsExpanded(!officialsExpanded)
+                                }
+                                className="text-blue-600 dark:text-blue-300 underline focus:outline-none ml-1"
+                            >
+                                {officialsExpanded ? "Show less" : "Read more"}
+                            </button>
+                        </>
+                    )}
                 </p>
             )}
 
             {parsedActivities.length > 0 && (
                 <p className="mb-2">
-                    <strong>Methods:</strong> {parsedActivities.join(", ")}
+                    <strong>Methods:</strong> {shownMethods.join(", ")}
+                    {hasMoreMethods && (
+                        <>
+                            {methodsExpanded ? ". " : ", ... "}
+                            <button
+                                onClick={() =>
+                                    setMethodsExpanded(!methodsExpanded)
+                                }
+                                className="text-blue-600 dark:text-blue-300 underline focus:outline-none ml-1"
+                            >
+                                {methodsExpanded ? "Show less" : "Read more"}
+                            </button>
+                        </>
+                    )}
                 </p>
             )}
 
