@@ -90,6 +90,10 @@ npm run dev
 -   **/connections/[slug]** Force graph
 -   **/methods/[slug]** Pie chart
 
+## 🙏 Acknowledgements
+
+Thanks to the Register of Lobbying at lobbying.ie for providing open, official data on Irish lobbying activity, which makes this project possible.
+
 ## 🤝 Contributing
 
 1. Fork it
