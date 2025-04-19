@@ -67,7 +67,10 @@ export default function LobbyistsPage({ lobbyists: initialLobbyists, allPeriods,
     if (!selectedPeriod) return
     setIsLoading(true)
     async function fetchLobbyists() {
-      const res = await fetch(`/api/lobbyists?period=${encodeURIComponent(selectedPeriod)}`)
+      const url = selectedPeriod
+        ? `/api/lobbyists?period=${encodeURIComponent(selectedPeriod)}`
+        : `/api/lobbyists?period=All`
+      const res = await fetch(url)
       const names = res.ok ? await res.json() : []
       setLobbyists(names.map((name) => ({ name, slug: slugify(name) })))
       setSelectedName(null) // Reset name filter on period change

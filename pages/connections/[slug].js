@@ -81,8 +81,9 @@ export default function ConnectionsOfficial() {
 
   useEffect(() => {
     async function fetchLatestYearAndMethodAndData() {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (context.req ? `https://${context.req.headers.host}` : "")
       try {
-        const res = await fetch("/api/periods-latest")
+        const res = await fetch(`${baseUrl}/api/periods-latest`)
         let latestYear = null
         if (res.ok) {
           const data = await res.json()
@@ -258,7 +259,7 @@ export default function ConnectionsOfficial() {
   }, [methods])
 
   useEffect(() => {
-    if (!selectedYear || loading) return
+    if (!selectedYear || !officialSlug) return
     async function fetchConnections() {
       setLoading(true)
       setError(null)
@@ -315,8 +316,8 @@ export default function ConnectionsOfficial() {
         setLoading(false)
       }
     }
-    if (selectedYear && !loading && officialSlug) fetchConnections()
-  }, [selectedYear, selectedMethod, loading, officialSlug])
+    fetchConnections()
+  }, [selectedYear, selectedMethod, officialSlug])
 
   const getLinkColor = (link) => {
     if (link.count >= 4) return "#d7263d"
