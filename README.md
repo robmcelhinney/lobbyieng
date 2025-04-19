@@ -1,80 +1,89 @@
-# Irish Lobbying Data Explorer
+**Lobbyieng**
 
-A web application for exploring, searching, and visualizing lobbying returns in Ireland. Built with Next.js, Tailwind CSS, and React, this project provides interactive tools to browse lobbying activities, officials, lobbyists, and their connections.
+Lobbyieng visualises lobbying activity in Ireland. It scrapes the official Register of Lobbying, links records to elected officials, and presents it in a searchable, interactive UI.
 
-## Features
+## 🚀 Features
 
--   Browse and search lobbying returns from 2015 – 2025
--   Visualize connections between lobbyists and officials
--   Interactive chord diagrams and data cards
--   Detailed views for lobbyists, officials, and lobbying methods
--   Responsive, accessible UI with dark mode support
+-   Browse records by official or lobbyist
+-   Filter by year, method (meetings, emails, calls, etc.), job title, or name
+-   Force‑directed graph of connections (react‑force‑graph‑2d)
+-   Chord diagram to compare two officials
+-   Pie charts for method breakdown (Chart.js)
 
-## Getting Started
+## 🔧 Tech Stack
+
+-   **Framework:** Next.js (SSR + API routes)
+-   **UI:** React, Tailwind CSS, react-select
+-   **Data:** SQLite (lobbying.db)
+-   **Charts:** react-chartjs-2, react-force-graph-2d
+
+## ⚙️ Getting Started
 
 ### Prerequisites
 
--   Node.js (18.x or later recommended)
--   npm, yarn, pnpm, or bun
+-   Node.js ≥14
+-   npm or yarn
+-   SQLite3
 
 ### Installation
-
-Clone the repository and install dependencies:
 
 ```bash
 git clone https://github.com/robmcelhinney/lobbyieng.git
 cd lobbyieng
-npm install
-# or
-yarn install
-# or
-bun install
+npm install     # or yarn
 ```
 
-Running the Development Server
+### Database
+
+Place `lobbying.db` at project root. To rebuild:
+
+```bash
+# assuming SQL and source CSVs in /data
+npm run build-db
+```
+
+### Environment
+
+No env vars required for local dev. API binds to port 3000.
+
+### Run
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-bun dev
+# http://localhost:3000
 ```
 
-Open http://localhost:3000 in your browser to view the app.
+## 🛠️ API Endpoints
 
-Building for Production
+-   **GET** `/api/officials?period=All&job_titles=TD,Minister` — list officials
+-   **GET** `/api/officials/[slug]?[page,year,method,lobbyist,per_page]` — detail + filters
+-   **GET** `/api/officials/[slug]/methods` — method breakdown
+-   **GET** `/api/lobbyists?period=` — list lobbyists
+-   **GET** `/api/lobbyists/[slug]?[page,year,method,official]` — lobbyist detail
+-   **GET** `/api/chord-data?officials=slug1,slug2&start_year&end_year` — chord JSON
+-   **GET** `/api/periods` — all periods
+-   **GET** `/api/periods-latest` — latest period
 
-```bash
-npm run build
-npm start
-```
+## 📖 Pages
 
-### Project Structure
+-   **/** Home overview
+-   **/dail** Search Dáil members
+-   **/officials** Browse officials
+-   **/officials/[slug]** Official detail
+-   **/lobbyists** Browse lobbyists
+-   **/lobbyists/[slug]** Lobbyist detail
+-   **/chord** Compare two officials
+-   **/connections/[slug]** Force graph
+-   **/methods/[slug]** Pie chart
 
--   components/ – React components for UI and data display
--   pages/ – Next.js pages and API routes
--   data/ – CSV datasets of lobbying returns (2015–2025)
--   public/ – Static assets and images
--   styles/ – Global and Tailwind CSS styles
--   parser.py – Python script for data processing
+## 🤝 Contributing
 
-### Data Sources
+1. Fork it
+2. Create a branch (`git checkout -b feature/XYZ`)
+3. Commit (`git commit -m "feat: add XYZ"`)
+4. Push (`git push origin feature/XYZ`)
+5. Open a PR
 
-Lobbying return data is sourced from lobbying.ie. See the data/ directory for included CSV files.
+## 📜 License
 
-### Contributing
-
-Contributions are welcome! Please open issues or pull requests for bug fixes, features, or improvements.
-
-### Fork the repository
-
-1. Create a new branch (git checkout -b feature/your-feature)
-1. Commit your changes
-1. Push to your fork and open a pull request
-
-### License
-
-This project is licensed under the MIT License.
-
-For questions or feedback, please open an issue.
+MIT © Robert McElhinney
