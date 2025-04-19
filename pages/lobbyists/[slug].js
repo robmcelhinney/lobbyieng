@@ -1,45 +1,67 @@
-import { useRouter } from "next/router";
-import Head from "next/head";
-import Select from "react-select";
-import LobbyingCardLobbyist from "../../components/LobbyingCardLobbyist";
-import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/router"
+import Head from "next/head"
+import Select from "react-select"
+import LobbyingCardLobbyist from "../../components/LobbyingCardLobbyist"
+import { useState, useEffect, useMemo } from "react"
 
 function toQueryString(query) {
-  const params = [];
+  const params = []
   for (const key in query) {
-    const value = query[key];
+    const value = query[key]
     if (Array.isArray(value)) {
-      value.forEach((v) =>
-        params.push(`${encodeURIComponent(key)}=${encodeURIComponent(v)}`),
-      );
+      value.forEach((v) => params.push(`${encodeURIComponent(key)}=${encodeURIComponent(v)}`))
     } else if (value !== undefined) {
-      params.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+      params.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
     }
   }
-  return params.join("&");
+  return params.join("&")
 }
 
 export async function getServerSideProps({ params, query, req }) {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    (req ? `https://${req.headers.host}` : "");
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (req ? `https://${req.headers.host}` : "")
   if (!params || !params.slug) {
-    return { notFound: true };
+    return { notFound: true }
   }
-  const res = await fetch(
-    `${baseUrl}/api/lobbyists/${params.slug}?${toQueryString(query)}`,
-  );
-  if (!res.ok) {
-    return { notFound: true };
+  try {
+    const res = await fetch(`${baseUrl}/api/lobbyists/${params.slug}?${toQueryString(query)}`)
+    if (!res.ok) {
+      return { notFound: true }
+    }
+    const lobbyistData = await res.json()
+    return {
+      props: { lobbyistData }
+    }
+  } catch (err) {
+    return {
+      props: { lobbyistData: null, fetchError: err.message }
+    }
   }
-  const lobbyistData = await res.json();
-  return {
-    props: { lobbyistData },
-  };
 }
 
-export default function LobbyistPage({ lobbyistData }) {
-  const router = useRouter();
+// Lobbyist image component for future use (if lobbyist images are available)
+import Image from "next/image"
+function LobbyistImage({ slug, name }) {
+  // Placeholder: adjust path if/when lobbyist images are available
+  const [imgExists, setImgExists] = useState(true)
+  useEffect(() => {
+    setImgExists(true)
+  }, [slug])
+  if (!slug) return null
+  const imagePath = `/images/lobbyists/${slug}.jpg`
+  return imgExists ? (
+    <Image
+      src={imagePath}
+      alt={name}
+      className="mx-auto mb-4 rounded shadow max-h-48"
+      width={192}
+      height={192}
+      onError={() => setImgExists(false)}
+    />
+  ) : null
+}
+
+export default function LobbyistPage({ lobbyistData, fetchError }) {
+  const router = useRouter()
   const {
     name,
     records = [],
@@ -49,66 +71,69 @@ export default function LobbyistPage({ lobbyistData }) {
     officials = [],
     years = [],
     methods = [],
-    currentFilters,
-  } = lobbyistData || {};
+    currentFilters
+  } = lobbyistData || {}
 
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
-  const officialOptions = [
-    { value: "", label: "All Officials" },
-    ...officials.map((o) => ({ value: o, label: o })),
-  ];
+  const officialOptions = [{ value: "", label: "All Officials" }, ...officials.map((o) => ({ value: o, label: o }))]
   const currentOfficial =
-    officialOptions.find(
-      (opt) => opt.value === (currentFilters?.officialFilter || ""),
-    ) || officialOptions[0];
+    officialOptions.find((opt) => opt.value === (currentFilters?.officialFilter || "")) || officialOptions[0]
 
-  const methodOptions = useMemo(
-    () => methods.map((m) => ({ value: m, label: m })),
-    [methods],
-  );
+  const methodOptions = useMemo(() => methods.map((m) => ({ value: m, label: m })), [methods])
   const selectedMethods = useMemo(() => {
     if (Array.isArray(currentFilters?.methodFilter)) {
-      return currentFilters.methodFilter;
-    } else if (
-      typeof currentFilters?.methodFilter === "string" &&
-      currentFilters.methodFilter
-    ) {
-      return [currentFilters.methodFilter];
+      return currentFilters.methodFilter
+    } else if (typeof currentFilters?.methodFilter === "string" && currentFilters.methodFilter) {
+      return [currentFilters.methodFilter]
     }
-    return [];
-  }, [currentFilters?.methodFilter]);
+    return []
+  }, [currentFilters?.methodFilter])
   const selectedMethodOptions = useMemo(
     () => methodOptions.filter((opt) => selectedMethods.includes(opt.value)),
-    [methodOptions, selectedMethods],
-  );
-  const [pendingMethods, setPendingMethods] = useState(selectedMethodOptions);
+    [methodOptions, selectedMethods]
+  )
+  const [pendingMethods, setPendingMethods] = useState(selectedMethodOptions)
   useEffect(() => {
-    setPendingMethods(selectedMethodOptions);
-  }, [selectedMethodOptions]);
+    setPendingMethods(selectedMethodOptions)
+  }, [selectedMethodOptions])
 
-  if (!lobbyistData) return <div>Lobbyist not found</div>;
+  if (fetchError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-cb-light-background dark:bg-cb-dark-background text-cb-light-text dark:text-cb-dark-text">
+        <div className="bg-white dark:bg-gray-800 rounded shadow p-8 text-center">
+          <h1 className="text-2xl font-bold mb-2">Error loading lobbyist data</h1>
+          <p className="mb-4 text-red-600 dark:text-red-400">{fetchError}</p>
+          <button className="px-4 py-2 bg-blue-500 text-white rounded" onClick={() => router.reload()}>
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!lobbyistData) return <div>Lobbyist not found</div>
 
   const handleFilterChange = (filterName, value) => {
-    let newQuery = { ...router.query, [filterName]: value, page: 1 };
+    let newQuery = { ...router.query, [filterName]: value, page: 1 }
     if (!value || (Array.isArray(value) && value.length === 0)) {
-      delete newQuery[filterName];
+      delete newQuery[filterName]
     }
     if (filterName === "method" && Array.isArray(value)) {
       Object.keys(newQuery).forEach((k) => {
-        if (k === "method" || k === "method[]") delete newQuery[k];
-      });
-      newQuery.method = value;
+        if (k === "method" || k === "method[]") delete newQuery[k]
+      })
+      newQuery.method = value
     }
-    router.push({ pathname: router.pathname, query: newQuery });
-  };
+    router.push({ pathname: router.pathname, query: newQuery })
+  }
 
   const handlePageChange = (newPage) => {
     router.push({
       pathname: router.pathname,
-      query: { ...router.query, page: newPage },
-    });
-  };
+      query: { ...router.query, page: newPage }
+    })
+  }
 
   return (
     <>
@@ -120,8 +145,7 @@ export default function LobbyistPage({ lobbyistData }) {
           <div className="max-w-6xl mx-auto px-4 text-center">
             <h1 className="text-4xl font-bold">{name}</h1>
             <p className="mt-2 text-lg">
-              Total Lobbying Efforts:{" "}
-              <span className="font-semibold">{total}</span>
+              Total Lobbying Efforts: <span className="font-semibold">{total}</span>
             </p>
           </div>
         </header>
@@ -135,9 +159,7 @@ export default function LobbyistPage({ lobbyistData }) {
               <Select
                 options={officialOptions}
                 value={currentOfficial}
-                onChange={(option) =>
-                  handleFilterChange("official", option.value)
-                }
+                onChange={(option) => handleFilterChange("official", option.value)}
                 isSearchable
                 placeholder="Search officials..."
                 styles={{
@@ -145,23 +167,21 @@ export default function LobbyistPage({ lobbyistData }) {
                     ...base,
                     backgroundColor: "hsl(var(--cb-light-background))",
                     borderColor: "#CBD5E0",
-                    color: "#111",
+                    color: "#111"
                   }),
                   menu: (base) => ({
                     ...base,
                     backgroundColor: "#fff",
                     color: "#111",
-                    zIndex: 9999,
-                  }),
+                    zIndex: 9999
+                  })
                 }}
               />
             </div>
 
             {/* Year filter */}
             <div className="w-32">
-              <label className="block mb-1 text-sm font-medium text-cb-light-text dark:text-cb-dark-text">
-                Year
-              </label>
+              <label className="block mb-1 text-sm font-medium text-cb-light-text dark:text-cb-dark-text">Year</label>
               <select
                 value={currentFilters.yearFilter || ""}
                 onChange={(e) => handleFilterChange("year", e.target.value)}
@@ -178,9 +198,7 @@ export default function LobbyistPage({ lobbyistData }) {
 
             {/* Method filter */}
             <div className="w-64 accent-blue-600 dark:accent-blue-400">
-              <label className="block mb-1 text-sm font-medium text-cb-light-text dark:text-cb-dark-text">
-                Method
-              </label>
+              <label className="block mb-1 text-sm font-medium text-cb-light-text dark:text-cb-dark-text">Method</label>
               <Select
                 options={methodOptions}
                 value={pendingMethods}
@@ -195,24 +213,22 @@ export default function LobbyistPage({ lobbyistData }) {
                     ...base,
                     backgroundColor: "hsl(var(--cb-light-background))",
                     borderColor: "#CBD5E0",
-                    color: "#111",
+                    color: "#111"
                   }),
                   menu: (base) => ({
                     ...base,
                     backgroundColor: "#fff",
                     color: "#111",
-                    zIndex: 9999,
-                  }),
+                    zIndex: 9999
+                  })
                 }}
-                menuPortalTarget={
-                  typeof window !== "undefined" ? document.body : undefined
-                }
+                menuPortalTarget={typeof window !== "undefined" ? document.body : undefined}
                 onMenuOpen={() => setPendingMethods(selectedMethodOptions)}
                 onMenuClose={() => {
                   handleFilterChange(
                     "method",
-                    pendingMethods.map((o) => o.value),
-                  );
+                    pendingMethods.map((o) => o.value)
+                  )
                 }}
               />
             </div>
@@ -229,48 +245,38 @@ export default function LobbyistPage({ lobbyistData }) {
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500 dark:text-gray-400">
-                No records found.
-              </p>
+              <p className="text-gray-500 dark:text-gray-400">No records found.</p>
             )}
 
             {/* Pagination */}
             <div className="flex flex-wrap items-center gap-2 mt-6">
               {page > 1 && (
-                <button
-                  onClick={() => handlePageChange(page - 1)}
-                  className="px-3 py-1 bg-blue-500 text-white rounded"
-                >
+                <button onClick={() => handlePageChange(page - 1)} className="px-3 py-1 bg-blue-500 text-white rounded">
                   ← Prev
                 </button>
               )}
               {page > 3 && (
                 <>
-                  <button
-                    onClick={() => handlePageChange(1)}
-                    className="px-3 py-1 bg-blue-500 text-white rounded"
-                  >
+                  <button onClick={() => handlePageChange(1)} className="px-3 py-1 bg-blue-500 text-white rounded">
                     1
                   </button>
                   {page > 4 && <span className="px-2">…</span>}
                 </>
               )}
               {[...Array(5)].map((_, i) => {
-                const p = page - 2 + i;
-                if (p < 1 || p > totalPages) return null;
+                const p = page - 2 + i
+                if (p < 1 || p > totalPages) return null
                 return (
                   <button
                     key={p}
                     onClick={() => handlePageChange(p)}
                     className={`px-3 py-1 rounded ${
-                      p === page
-                        ? "bg-blue-700 font-bold text-white"
-                        : "bg-blue-500 text-white"
+                      p === page ? "bg-blue-700 font-bold text-white" : "bg-blue-500 text-white"
                     }`}
                   >
                     {p}
                   </button>
-                );
+                )
               })}
               {page < totalPages - 2 && (
                 <>
@@ -284,10 +290,7 @@ export default function LobbyistPage({ lobbyistData }) {
                 </>
               )}
               {page < totalPages && (
-                <button
-                  onClick={() => handlePageChange(page + 1)}
-                  className="px-3 py-1 bg-blue-500 text-white rounded"
-                >
+                <button onClick={() => handlePageChange(page + 1)} className="px-3 py-1 bg-blue-500 text-white rounded">
                   Next →
                 </button>
               )}
@@ -295,14 +298,10 @@ export default function LobbyistPage({ lobbyistData }) {
               {/* Go to page */}
               <form
                 onSubmit={(e) => {
-                  e.preventDefault();
-                  const targetPage = parseInt(e.target.page.value);
-                  if (
-                    targetPage >= 1 &&
-                    targetPage <= totalPages &&
-                    targetPage !== page
-                  ) {
-                    handlePageChange(targetPage);
+                  e.preventDefault()
+                  const targetPage = parseInt(e.target.page.value)
+                  if (targetPage >= 1 && targetPage <= totalPages && targetPage !== page) {
+                    handlePageChange(targetPage)
                   }
                 }}
                 className="flex items-center ml-4"
@@ -316,10 +315,7 @@ export default function LobbyistPage({ lobbyistData }) {
                   defaultValue={page}
                   className="w-16 border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-700 text-cb-light-text dark:text-cb-dark-text focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <button
-                  type="submit"
-                  className="ml-2 px-3 py-1 bg-blue-500 text-white rounded"
-                >
+                <button type="submit" className="ml-2 px-3 py-1 bg-blue-500 text-white rounded">
                   Go
                 </button>
               </form>
@@ -328,5 +324,5 @@ export default function LobbyistPage({ lobbyistData }) {
         </main>
       </div>
     </>
-  );
+  )
 }

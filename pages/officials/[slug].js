@@ -1,52 +1,46 @@
-import { useRouter } from "next/router";
-import Head from "next/head";
-import Select from "react-select";
-import LobbyingCard from "../../components/LobbyingCard";
-import { useState, useEffect, useMemo } from "react";
-import Image from "next/image";
+import { useRouter } from "next/router"
+import Head from "next/head"
+import Select from "react-select"
+import LobbyingCard from "../../components/LobbyingCard"
+import { useState, useEffect, useMemo } from "react"
+import Image from "next/image"
 
 function toQueryString(query) {
-  const params = [];
+  const params = []
   for (const key in query) {
-    const value = query[key];
+    const value = query[key]
     if (Array.isArray(value)) {
-      value.forEach((v) =>
-        params.push(`${encodeURIComponent(key)}=${encodeURIComponent(v)}`),
-      );
+      value.forEach((v) => params.push(`${encodeURIComponent(key)}=${encodeURIComponent(v)}`))
     } else if (value !== undefined) {
-      params.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+      params.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
     }
   }
-  return params.join("&");
+  return params.join("&")
 }
 
 export async function getServerSideProps({ params, query, req }) {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    (req ? `https://${req.headers.host}` : "");
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (req ? `https://${req.headers.host}` : "")
   if (!params || !params.slug) {
-    return { notFound: true };
+    return { notFound: true }
   }
-  const res = await fetch(
-    `${baseUrl}/api/officials/${params.slug}?${toQueryString(query)}`,
-  );
+  const res = await fetch(`${baseUrl}/api/officials/${params.slug}?${toQueryString(query)}`)
   if (!res.ok) {
-    return { notFound: true };
+    return { notFound: true }
   }
-  const officialData = await res.json();
+  const officialData = await res.json()
   return {
-    props: { officialData },
-  };
+    props: { officialData }
+  }
 }
 
 // Politician image component to handle image existence check
 function PoliticianImage({ slug, name }) {
-  const [imgExists, setImgExists] = useState(true);
+  const [imgExists, setImgExists] = useState(true)
   useEffect(() => {
-    setImgExists(true);
-  }, [slug]);
-  if (!slug) return null;
-  const imagePath = `/images/td_thumbnails/${slug}.jpg`;
+    setImgExists(true)
+  }, [slug])
+  if (!slug) return null
+  const imagePath = `/images/td_thumbnails/${slug}.jpg`
   return imgExists ? (
     <Image
       src={imagePath}
@@ -56,14 +50,14 @@ function PoliticianImage({ slug, name }) {
       height={192}
       onError={() => setImgExists(false)}
     />
-  ) : null;
+  ) : null
 }
 
 export default function OfficialPage({ officialData }) {
   // Move all hooks to the top level, before any return or conditional
-  const router = useRouter();
+  const router = useRouter()
   // Default to empty object to avoid conditional hooks
-  const safeOfficialData = officialData || {};
+  const safeOfficialData = officialData || {}
   const {
     name,
     slug,
@@ -74,69 +68,58 @@ export default function OfficialPage({ officialData }) {
     lobbyists = [],
     years = [],
     methods = [],
-    currentFilters = {},
-  } = safeOfficialData;
+    currentFilters = {}
+  } = safeOfficialData
 
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
-  const lobbyistOptions = [
-    { value: "", label: "All Lobbyists" },
-    ...lobbyists.map((l) => ({ value: l, label: l })),
-  ];
+  const lobbyistOptions = [{ value: "", label: "All Lobbyists" }, ...lobbyists.map((l) => ({ value: l, label: l }))]
   const currentLobbyist =
-    lobbyistOptions.find(
-      (opt) => opt.value === currentFilters.lobbyistFilter,
-    ) || lobbyistOptions[0];
+    lobbyistOptions.find((opt) => opt.value === currentFilters.lobbyistFilter) || lobbyistOptions[0]
 
-  const methodOptions = useMemo(
-    () => methods.map((m) => ({ value: m, label: m })),
-    [methods],
-  );
+  const methodOptions = useMemo(() => methods.map((m) => ({ value: m, label: m })), [methods])
   const selectedMethods = useMemo(() => {
     if (Array.isArray(currentFilters.methodFilter)) {
-      return currentFilters.methodFilter;
-    } else if (
-      typeof currentFilters.methodFilter === "string" &&
-      currentFilters.methodFilter
-    ) {
-      return [currentFilters.methodFilter];
+      return currentFilters.methodFilter
+    } else if (typeof currentFilters.methodFilter === "string" && currentFilters.methodFilter) {
+      return [currentFilters.methodFilter]
     }
-    return [];
-  }, [currentFilters.methodFilter]);
+    return []
+  }, [currentFilters.methodFilter])
   const selectedMethodOptions = useMemo(
     () => methodOptions.filter((opt) => selectedMethods.includes(opt.value)),
-    [methodOptions, selectedMethods],
-  );
-  const [pendingMethods, setPendingMethods] = useState(selectedMethodOptions);
+    [methodOptions, selectedMethods]
+  )
+  const [pendingMethods, setPendingMethods] = useState(selectedMethodOptions)
   useEffect(() => {
-    setPendingMethods(selectedMethodOptions);
-  }, [selectedMethodOptions]);
+    setPendingMethods(selectedMethodOptions)
+  }, [selectedMethodOptions])
 
-  if (!officialData) return <div>Official not found</div>;
+  if (!officialData) return <div>Official not found</div>
 
   const handleFilterChange = (filterName, value) => {
-    let newQuery = { ...router.query, [filterName]: value, page: 1 };
+    let newQuery = { ...router.query, [filterName]: value, page: 1 }
     if (!value || (Array.isArray(value) && value.length === 0)) {
-      delete newQuery[filterName];
+      delete newQuery[filterName]
     }
     // Special handling for method multi-select: flatten to multiple 'method' keys
     if (filterName === "method" && Array.isArray(value)) {
       // Remove any method or method[] keys
       Object.keys(newQuery).forEach((k) => {
-        if (k === "method" || k === "method[]") delete newQuery[k];
-      });
+        if (k === "method" || k === "method[]") delete newQuery[k]
+      })
       // Next.js router supports passing arrays for repeated query params
-      newQuery.method = value;
+      newQuery.method = value
     }
-    router.push({ pathname: router.pathname, query: newQuery });
-  };
+    router.push({ pathname: router.pathname, query: newQuery })
+  }
 
   const handlePageChange = (newPage) => {
     router.push({
       pathname: router.pathname,
-      query: { ...router.query, page: newPage },
-    });
-  };
+      query: { ...router.query, page: newPage }
+    })
+  }
 
   return (
     <>
@@ -151,8 +134,7 @@ export default function OfficialPage({ officialData }) {
             <PoliticianImage slug={slug} name={name} />
             <h1 className="text-4xl font-bold">{name}</h1>
             <p className="mt-2 text-lg">
-              Total Lobbying Efforts:{" "}
-              <span className="font-semibold">{total}</span>
+              Total Lobbying Efforts: <span className="font-semibold">{total}</span>
             </p>
             {/* Link to Connections Graph */}
             <a
@@ -176,15 +158,11 @@ export default function OfficialPage({ officialData }) {
           <div className="bg-white dark:bg-gray-800 rounded-md shadow p-4 mb-6 flex flex-col sm:flex-row gap-6 items-center">
             {/* Lobbyist Filter */}
             <div className="w-64 accent-blue-600 dark:accent-blue-400">
-              <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                Lobbyist
-              </label>
+              <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Lobbyist</label>
               <Select
                 options={lobbyistOptions}
                 value={currentLobbyist}
-                onChange={(option) =>
-                  handleFilterChange("lobbyist", option.value)
-                }
+                onChange={(option) => handleFilterChange("lobbyist", option.value)}
                 isSearchable
                 placeholder="Search lobbyists..."
                 styles={{
@@ -192,23 +170,21 @@ export default function OfficialPage({ officialData }) {
                     ...base,
                     backgroundColor: "var(--cb-bg, white)",
                     color: "var(--cb-text, black)",
-                    borderColor: "#CBD5E0",
+                    borderColor: "#CBD5E0"
                   }),
                   menu: (base) => ({
                     ...base,
                     backgroundColor: "var(--cb-bg, white)",
                     color: "var(--cb-text, black)",
-                    zIndex: 9999,
-                  }),
+                    zIndex: 9999
+                  })
                 }}
               />
             </div>
 
             {/* Year Filter */}
             <div className="w-32">
-              <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                Year
-              </label>
+              <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Year</label>
               <select
                 value={currentFilters.yearFilter || ""}
                 onChange={(e) => handleFilterChange("year", e.target.value)}
@@ -225,9 +201,7 @@ export default function OfficialPage({ officialData }) {
 
             {/* Method Filter (multi-select, Grafana style: only update on close) */}
             <div className="w-64 accent-blue-600 dark:accent-blue-400">
-              <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                Method
-              </label>
+              <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Method</label>
               <Select
                 options={methodOptions}
                 value={pendingMethods}
@@ -242,24 +216,22 @@ export default function OfficialPage({ officialData }) {
                     ...base,
                     backgroundColor: "var(--cb-bg, white)",
                     color: "var(--cb-text, black)",
-                    borderColor: "#CBD5E0",
+                    borderColor: "#CBD5E0"
                   }),
                   menu: (base) => ({
                     ...base,
                     backgroundColor: "var(--cb-bg, white)",
                     color: "var(--cb-text, black)",
-                    zIndex: 9999,
-                  }),
+                    zIndex: 9999
+                  })
                 }}
-                menuPortalTarget={
-                  typeof window !== "undefined" ? document.body : undefined
-                }
+                menuPortalTarget={typeof window !== "undefined" ? document.body : undefined}
                 onMenuOpen={() => setPendingMethods(selectedMethodOptions)}
                 onMenuClose={() => {
                   handleFilterChange(
                     "method",
-                    pendingMethods.map((o) => o.value),
-                  );
+                    pendingMethods.map((o) => o.value)
+                  )
                 }}
               />
             </div>
@@ -277,48 +249,36 @@ export default function OfficialPage({ officialData }) {
                 ))}
               </div>
             ) : (
-              <p className="text-gray-600 dark:text-gray-400">
-                No records found.
-              </p>
+              <p className="text-gray-600 dark:text-gray-400">No records found.</p>
             )}
 
             {/* Pagination */}
             <div className="flex flex-wrap items-center gap-2 mt-6">
               {page > 1 && (
-                <button
-                  onClick={() => handlePageChange(page - 1)}
-                  className="px-3 py-1 bg-blue-500 text-white rounded"
-                >
+                <button onClick={() => handlePageChange(page - 1)} className="px-3 py-1 bg-blue-500 text-white rounded">
                   ← Prev
                 </button>
               )}
               {page > 3 && (
                 <>
-                  <button
-                    onClick={() => handlePageChange(1)}
-                    className="px-3 py-1 bg-blue-500 text-white rounded"
-                  >
+                  <button onClick={() => handlePageChange(1)} className="px-3 py-1 bg-blue-500 text-white rounded">
                     1
                   </button>
                   {page > 4 && <span className="px-2">…</span>}
                 </>
               )}
               {[...Array(5)].map((_, i) => {
-                const p = page - 2 + i;
-                if (p < 1 || p > totalPages) return null;
+                const p = page - 2 + i
+                if (p < 1 || p > totalPages) return null
                 return (
                   <button
                     key={p}
                     onClick={() => handlePageChange(p)}
-                    className={`px-3 py-1 rounded ${
-                      p === page
-                        ? "bg-blue-700 font-bold"
-                        : "bg-blue-500 text-white"
-                    }`}
+                    className={`px-3 py-1 rounded ${p === page ? "bg-blue-700 font-bold" : "bg-blue-500 text-white"}`}
                   >
                     {p}
                   </button>
-                );
+                )
               })}
               {page < totalPages - 2 && (
                 <>
@@ -332,23 +292,16 @@ export default function OfficialPage({ officialData }) {
                 </>
               )}
               {page < totalPages && (
-                <button
-                  onClick={() => handlePageChange(page + 1)}
-                  className="px-3 py-1 bg-blue-500 text-white rounded"
-                >
+                <button onClick={() => handlePageChange(page + 1)} className="px-3 py-1 bg-blue-500 text-white rounded">
                   Next →
                 </button>
               )}
               <form
                 onSubmit={(e) => {
-                  e.preventDefault();
-                  const targetPage = parseInt(e.target.page.value);
-                  if (
-                    targetPage >= 1 &&
-                    targetPage <= totalPages &&
-                    targetPage !== page
-                  ) {
-                    handlePageChange(targetPage);
+                  e.preventDefault()
+                  const targetPage = parseInt(e.target.page.value)
+                  if (targetPage >= 1 && targetPage <= totalPages && targetPage !== page) {
+                    handlePageChange(targetPage)
                   }
                 }}
                 className="flex items-center ml-4"
@@ -362,10 +315,7 @@ export default function OfficialPage({ officialData }) {
                   defaultValue={page}
                   className="w-16 border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <button
-                  type="submit"
-                  className="ml-2 px-3 py-1 bg-blue-500 text-white rounded"
-                >
+                <button type="submit" className="ml-2 px-3 py-1 bg-blue-500 text-white rounded">
                   Go
                 </button>
               </form>
@@ -374,5 +324,5 @@ export default function OfficialPage({ officialData }) {
         </main>
       </div>
     </>
-  );
+  )
 }

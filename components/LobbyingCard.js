@@ -1,5 +1,5 @@
-import { useState } from "react";
-import Link from "next/link";
+import { useState } from "react"
+import Link from "next/link"
 
 export default function LobbyingCard({ record }) {
   const {
@@ -10,41 +10,31 @@ export default function LobbyingCard({ record }) {
     dpo_entries = [],
     lobbying_activities = [],
     isFormerDPO,
-    url,
-  } = record;
+    url
+  } = record
 
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(false)
 
-  const formattedDate = date_published?.slice(0, 10) || "Unknown";
-  const detailsTooLong = specific_details?.length > 300;
-  const shownDetails = expanded
-    ? specific_details
-    : specific_details?.slice(0, 300);
+  const formattedDate = date_published?.slice(0, 10) || "Unknown"
+  const detailsTooLong = specific_details?.length > 300
+  const shownDetails = expanded ? specific_details : specific_details?.slice(0, 300)
 
   // Derive official names from dpo_entries
-  const parsedDPOs = Array.isArray(dpo_entries)
-    ? dpo_entries.map((d) => d.person_name).filter(Boolean)
-    : [];
+  const parsedDPOs = Array.isArray(dpo_entries) ? dpo_entries.map((d) => d.person_name).filter(Boolean) : []
 
   // Show less / read more for Officials
-  const [officialsExpanded, setOfficialsExpanded] = useState(false);
-  const officialsLimit = 8;
-  const shownOfficials = officialsExpanded
-    ? parsedDPOs
-    : parsedDPOs.slice(0, officialsLimit);
-  const hasMoreOfficials = parsedDPOs.length > officialsLimit;
+  const [officialsExpanded, setOfficialsExpanded] = useState(false)
+  const officialsLimit = 8
+  const shownOfficials = officialsExpanded ? parsedDPOs : parsedDPOs.slice(0, officialsLimit)
+  const hasMoreOfficials = parsedDPOs.length > officialsLimit
 
-  const parsedActivities = Array.isArray(lobbying_activities)
-    ? lobbying_activities.filter(Boolean)
-    : [];
+  const parsedActivities = Array.isArray(lobbying_activities) ? lobbying_activities.filter(Boolean) : []
 
   // Show less / read more for Methods
-  const [methodsExpanded, setMethodsExpanded] = useState(false);
-  const methodsLimit = 3;
-  const shownMethods = methodsExpanded
-    ? parsedActivities
-    : parsedActivities.slice(0, methodsLimit);
-  const hasMoreMethods = parsedActivities.length > methodsLimit;
+  const [methodsExpanded, setMethodsExpanded] = useState(false)
+  const methodsLimit = 3
+  const shownMethods = methodsExpanded ? parsedActivities : parsedActivities.slice(0, methodsLimit)
+  const hasMoreMethods = parsedActivities.length > methodsLimit
 
   const slugify = (name) =>
     name
@@ -52,7 +42,7 @@ export default function LobbyingCard({ record }) {
       .replace(/\p{Diacritic}/gu, "")
       .toLowerCase()
       .trim()
-      .replace(/\s+/g, "-");
+      .replace(/\s+/g, "-")
 
   return (
     <div className="border border-gray-300 dark:border-gray-600 rounded-lg p-4 mb-4 shadow-sm bg-white dark:bg-gray-700 text-cb-light-text dark:text-cb-dark-text">
@@ -152,15 +142,10 @@ export default function LobbyingCard({ record }) {
       )}
 
       <div className="mt-2">
-        <a
-          href={`https://${url}`}
-          className="text-blue-600 hover:underline"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
+        <a href={`https://${url}`} className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">
           View Full Record
         </a>
       </div>
     </div>
-  );
+  )
 }

@@ -1,27 +1,25 @@
-import React from "react";
+import React from "react"
 
 function parseDetailsAndMethods(details) {
-  if (!details) return [];
+  if (!details) return []
   return details.split(/,(?![^|]*\|)/).map((entry) => {
-    const parts = entry.split("|").map((s) => s.trim());
+    const parts = entry.split("|").map((s) => s.trim())
     return {
       description: parts[0] || "",
       method: parts[1] || null,
-      count: parts[2] || null,
-    };
-  });
+      count: parts[2] || null
+    }
+  })
 }
 
 function extractMethodFromActivity(activity) {
-  if (!activity) return null;
-  const parts = activity.split("|");
-  return parts.length > 1 ? parts[1].trim() : null;
+  if (!activity) return null
+  const parts = activity.split("|")
+  return parts.length > 1 ? parts[1].trim() : null
 }
 
 export default function LobbyingCardLobbyist({ record }) {
-  const date = record.date_published
-    ? record.date_published.slice(0, 10)
-    : "Unknown";
+  const date = record.date_published ? record.date_published.slice(0, 10) : "Unknown"
   const politicians =
     record.dpo_entries && record.dpo_entries.length > 0
       ? record.dpo_entries.map((dpo, i) => (
@@ -32,19 +30,17 @@ export default function LobbyingCardLobbyist({ record }) {
             {i < record.dpo_entries.length - 1 ? "; " : ""}
           </span>
         ))
-      : [<span key="none">Unknown</span>];
+      : [<span key="none">Unknown</span>]
 
-  const intent = record.intended_results || "Unknown";
-  const details = record.specific_details || "Unknown";
-  const parsed = parseDetailsAndMethods(details);
+  const intent = record.intended_results || "Unknown"
+  const details = record.specific_details || "Unknown"
+  const parsed = parseDetailsAndMethods(details)
 
-  const methods = (record.lobbying_activities || [])
-    .map(extractMethodFromActivity)
-    .filter(Boolean);
-  const uniqueMethods = Array.from(new Set(methods));
+  const methods = (record.lobbying_activities || []).map(extractMethodFromActivity).filter(Boolean)
+  const uniqueMethods = Array.from(new Set(methods))
 
   // Show Former DPO badge if isFormerDPO is true
-  const isFormerDPO = record.isFormerDPO;
+  const isFormerDPO = record.isFormerDPO
 
   return (
     <div className="border border-gray-300 dark:border-gray-600 rounded-lg p-4 mb-4 shadow-sm bg-white dark:bg-gray-700 text-cb-light-text dark:text-cb-dark-text">
@@ -77,23 +73,15 @@ export default function LobbyingCardLobbyist({ record }) {
       </div>
       <div className="mb-2">
         <span className="font-semibold">Methods: </span>
-        {uniqueMethods.length > 0 ? (
-          uniqueMethods.join(", ")
-        ) : (
-          <span className="text-gray-400">Unknown</span>
-        )}
+        {uniqueMethods.length > 0 ? uniqueMethods.join(", ") : <span className="text-gray-400">Unknown</span>}
       </div>
       <div className="mb-2">
         <span className="font-semibold">Details & Methods:</span>
         <table className="min-w-full text-sm mt-2 border-separate border-spacing-y-1">
           <thead>
             <tr>
-              <th className="text-left pr-4 text-cb-light-text dark:text-cb-dark-text">
-                Method
-              </th>
-              <th className="text-left text-cb-light-text dark:text-cb-dark-text">
-                Description
-              </th>
+              <th className="text-left pr-4 text-cb-light-text dark:text-cb-dark-text">Method</th>
+              <th className="text-left text-cb-light-text dark:text-cb-dark-text">Description</th>
             </tr>
           </thead>
           <tbody>
@@ -101,15 +89,9 @@ export default function LobbyingCardLobbyist({ record }) {
               parsed.map((item, idx) => (
                 <tr key={idx}>
                   <td className="pr-4 font-medium text-blue-900 dark:text-blue-300">
-                    {item.method || (
-                      <span className="text-gray-400 dark:text-gray-500">
-                        —
-                      </span>
-                    )}
+                    {item.method || <span className="text-gray-400 dark:text-gray-500">—</span>}
                   </td>
-                  <td className="text-cb-light-text dark:text-cb-dark-text">
-                    {item.description}
-                  </td>
+                  <td className="text-cb-light-text dark:text-cb-dark-text">{item.description}</td>
                 </tr>
               ))
             ) : (
@@ -131,5 +113,5 @@ export default function LobbyingCardLobbyist({ record }) {
         </a>
       </div>
     </div>
-  );
+  )
 }

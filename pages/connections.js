@@ -1,5 +1,5 @@
-import React from "react";
-import Head from "next/head";
+import React from "react"
+import Head from "next/head"
 
 export default function ConnectionsOverview() {
   return (
@@ -24,8 +24,7 @@ export default function ConnectionsOverview() {
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-md p-8 text-center">
             <h2 className="text-xl font-semibold mb-4">How to use</h2>
             <p className="mb-2">
-              To view a force-directed graph of lobbying connections for a
-              specific official, go to{" "}
+              To view a force-directed graph of lobbying connections for a specific official, go to{" "}
               <code className="bg-gray-200 dark:bg-gray-700 dark:text-gray-100 px-1 py-0.5 rounded">
                 /connections/[slug]
               </code>
@@ -41,5 +40,5 @@ export default function ConnectionsOverview() {
         </main>
       </div>
     </>
-  );
+  )
 }
