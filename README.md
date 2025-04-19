@@ -4,28 +4,28 @@ Lobbyieng visualises lobbying activity in Ireland. It scrapes the official Regis
 
 ## 🚀 Features
 
--   Browse records by official or lobbyist
--   Filter by year, method (meetings, emails, calls, etc.), job title, or name
--   Force‑directed graph of connections (react‑force‑graph‑2d)
--   Chord diagram to compare two officials
--   Pie charts for method breakdown (Chart.js)
+- Browse records by official or lobbyist
+- Filter by year, method (meetings, emails, calls, etc.), job title, or name
+- Force‑directed graph of connections (react‑force‑graph‑2d)
+- Chord diagram to compare two officials
+- Pie charts for method breakdown (Chart.js)
 
 ## 🔧 Tech Stack
 
--   **Framework:** Next.js (SSR + API routes)
--   **UI:** React, Tailwind CSS, react-select
--   **Data:** SQLite (lobbying.db)
--   **Charts:** react-chartjs-2, react-force-graph-2d
+- **Framework:** Next.js (SSR + API routes)
+- **UI:** React, Tailwind CSS, react-select
+- **Data:** SQLite (lobbying.db)
+- **Charts:** react-chartjs-2, react-force-graph-2d
 
 ## ⚙️ Getting Started
 
 ### Prerequisites
 
--   Node.js ≥14
--   npm or yarn
--   Python ≥3.8
--   SQLite3
--   Required Python packages: `sqlalchemy`, `requests`
+- Node.js ≥14
+- npm or yarn
+- Python ≥3.8
+- SQLite3
+- Required Python packages: `sqlalchemy`, `requests`
 
 ### Clone & Install
 
@@ -41,14 +41,14 @@ npm install     # or yarn
 1. Store CSVs in the `data/` directory.
 1. Run the parser to ingest CSVs into SQLite:
 
-    ```bash
-    python parser.py
-    ```
+   ```bash
+   python parser.py
+   ```
 
-    - This script (`parser.py`) drops and recreates tables, normalises names, and populates:
-        - `lobbying_records`
-        - `dpo_entries`
-        - `lobbying_activity_entries`
+   - This script (`parser.py`) drops and recreates tables, normalises names, and populates:
+     - `lobbying_records`
+     - `dpo_entries`
+     - `lobbying_activity_entries`
 
 1. After ingesting, indexes are created automatically for faster queries.
 
@@ -69,26 +69,26 @@ npm run dev
 
 ## 🛠️ API Endpoints
 
--   **GET** `/api/officials?period=All&job_titles=TD,Minister` — list officials
--   **GET** `/api/officials/[slug]?[page,year,method,lobbyist,per_page]` — detail + filters
--   **GET** `/api/officials/[slug]/methods` — method breakdown
--   **GET** `/api/lobbyists?period=` — list lobbyists
--   **GET** `/api/lobbyists/[slug]?[page,year,method,official]` — lobbyist detail
--   **GET** `/api/chord-data?officials=slug1,slug2&start_year&end_year` — chord JSON
--   **GET** `/api/periods` — all periods
--   **GET** `/api/periods-latest` — latest period
+- **GET** `/api/officials?period=All&job_titles=TD,Minister` — list officials
+- **GET** `/api/officials/[slug]?[page,year,method,lobbyist,per_page]` — detail + filters
+- **GET** `/api/officials/[slug]/methods` — method breakdown
+- **GET** `/api/lobbyists?period=` — list lobbyists
+- **GET** `/api/lobbyists/[slug]?[page,year,method,official]` — lobbyist detail
+- **GET** `/api/chord-data?officials=slug1,slug2&start_year&end_year` — chord JSON
+- **GET** `/api/periods` — all periods
+- **GET** `/api/periods-latest` — latest period
 
 ## 📖 Pages
 
--   **/** Home overview
--   **/dail** Search Dáil members
--   **/officials** Browse officials
--   **/officials/[slug]** Official detail
--   **/lobbyists** Browse lobbyists
--   **/lobbyists/[slug]** Lobbyist detail
--   **/chord** Compare two officials
--   **/connections/[slug]** Force graph
--   **/methods/[slug]** Pie chart
+- **/** Home overview
+- **/dail** Search Dáil members
+- **/officials** Browse officials
+- **/officials/[slug]** Official detail
+- **/lobbyists** Browse lobbyists
+- **/lobbyists/[slug]** Lobbyist detail
+- **/chord** Compare two officials
+- **/connections/[slug]** Force graph
+- **/methods/[slug]** Pie chart
 
 ## 🙏 Acknowledgements
 

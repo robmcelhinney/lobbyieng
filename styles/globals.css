@@ -21,5 +21,5 @@ button {
 }
 
 .card {
-    @apply bg-cb-light-background dark:bg-cb-dark-background rounded shadow p-4;
+  @apply bg-cb-light-background dark:bg-cb-dark-background rounded shadow p-4;
 }
