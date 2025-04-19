@@ -38,28 +38,6 @@ export async function getServerSideProps({ params, query, req }) {
   }
 }
 
-// Lobbyist image component for future use (if lobbyist images are available)
-import Image from "next/image"
-function LobbyistImage({ slug, name }) {
-  // Placeholder: adjust path if/when lobbyist images are available
-  const [imgExists, setImgExists] = useState(true)
-  useEffect(() => {
-    setImgExists(true)
-  }, [slug])
-  if (!slug) return null
-  const imagePath = `/images/lobbyists/${slug}.jpg`
-  return imgExists ? (
-    <Image
-      src={imagePath}
-      alt={name}
-      className="mx-auto mb-4 rounded shadow max-h-48"
-      width={192}
-      height={192}
-      onError={() => setImgExists(false)}
-    />
-  ) : null
-}
-
 export default function LobbyistPage({ lobbyistData, fetchError }) {
   const router = useRouter()
   const {
