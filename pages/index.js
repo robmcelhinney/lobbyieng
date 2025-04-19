@@ -49,25 +49,25 @@ export default function Home() {
             <h2 className="text-xl font-bold mb-2">About this project</h2>
             <p className="mb-2">
               This site visualises lobbying activity involving elected Irish officials. It pulls data from Ireland&#39;s
-              official lobbying register, parses it, and links each lobbying record to the politicians lobbied. You can
-              browse records by official, filter by job title, time period, or name, and view detailed information for
-              each lobbying activity — including the lobbyist, their goals, methods used (e.g. meetings, emails), and
-              which officials were contacted. This project aims to make lobbying activity more transparent, navigable,
-              and searchable for citizens, journalists, and researchers. This project provides a searchable, browsable
-              interface to Irish lobbying and officials data. All data is sourced from the official Register of Lobbying
-              at
+              official lobbying register and links each lobbying record to the politicians contacted. You can filter by
+              name, job title, or date; explore detailed records showing the lobbyist, their goals, methods (e.g.
+              meetings, emails), and the officials involved.
+            </p>
+            <p className="mb-2">
+              The aim is to make lobbying in Ireland more transparent, searchable, and useful for citizens, journalists,
+              and researchers. All data comes from the official
               <a
                 href="https://www.lobbying.ie/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-700 underline ml-1"
               >
-                lobbying.ie
+                Register of Lobbying
               </a>
               .
             </p>
             <p className="mb-2">
-              Lobbyieng is open source. You can view and contribute to the code on
+              Lobbyieng is open source — view and contribute on
               <a
                 href="https://github.com/robmcelhinney/lobbyieng/"
                 target="_blank"
@@ -104,6 +104,15 @@ export default function Home() {
             </li>
           </ul>
         </main>
+        <footer className="max-w-3xl mx-auto px-4 pb-8 text-center text-gray-600 dark:text-gray-400">
+          <hr className="my-8 border-gray-300 dark:border-gray-700" />
+          <p>
+            Contact:{" "}
+            <a href="mailto:lobbyieng@robmcelhinney" className="text-blue-700 underline hover:text-blue-900">
+              lobbyieng@robmcelhinney
+            </a>
+          </p>
+        </footer>
       </div>
     </>
   )
