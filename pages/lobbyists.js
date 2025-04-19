@@ -13,10 +13,13 @@ function slugify(name) {
         .toLowerCase()
 }
 
-export async function getServerSideProps() {
+export async function getServerSideProps({ req }) {
+    const baseUrl =
+        process.env.NEXT_PUBLIC_BASE_URL ||
+        (req ? `https://${req.headers.host}` : "")
     try {
         // Fetch all unique periods
-        const periodsRes = await fetch("/api/officials?period=All")
+        const periodsRes = await fetch(`${baseUrl}/api/officials?period=All`)
         const officials = periodsRes.ok ? await periodsRes.json() : []
         // Extract all unique periods from officials (like dail.js)
         const allPeriods = Array.from(
@@ -51,14 +54,16 @@ export async function getServerSideProps() {
             return ay.month - by.month
         })
         // Fetch latest period
-        const latestRes = await fetch("/api/periods-latest")
+        const latestRes = await fetch(`${baseUrl}/api/periods-latest`)
         const latestJson = latestRes.ok ? await latestRes.json() : {}
         const latestPeriod =
             latestJson.period ||
             (allPeriods.length > 0 ? allPeriods[allPeriods.length - 1] : "")
         // Fetch lobbyists for latest period
         const lobbyistsRes = await fetch(
-            `/api/lobbyists?period=${encodeURIComponent(latestPeriod)}`
+            `${baseUrl}/api/lobbyists?period=${encodeURIComponent(
+                latestPeriod
+            )}`
         )
         const names = lobbyistsRes.ok ? await lobbyistsRes.json() : []
         const lobbyists = names.map((name) => ({ name, slug: slugify(name) }))
