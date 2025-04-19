@@ -3,6 +3,7 @@ import Head from "next/head"
 import Select from "react-select"
 import LobbyingCard from "../../components/LobbyingCard"
 import { useState, useEffect, useMemo } from "react"
+import Image from "next/image"
 
 function toQueryString(query) {
     const params = []
@@ -50,17 +51,22 @@ function PoliticianImage({ slug, name }) {
     if (!slug) return null
     const imagePath = `/images/td_thumbnails/${slug}.jpg`
     return imgExists ? (
-        <img
+        <Image
             src={imagePath}
             alt={name}
             className="mx-auto mb-4 rounded shadow max-h-48"
+            width={192}
+            height={192}
             onError={() => setImgExists(false)}
         />
     ) : null
 }
 
 export default function OfficialPage({ officialData }) {
-    if (!officialData) return <div>Official not found</div>
+    // Move all hooks to the top level, before any return or conditional
+    const router = useRouter()
+    // Default to empty object to avoid conditional hooks
+    const safeOfficialData = officialData || {}
     const {
         name,
         slug,
@@ -71,11 +77,46 @@ export default function OfficialPage({ officialData }) {
         lobbyists = [],
         years = [],
         methods = [],
-        currentFilters,
-    } = officialData
+        currentFilters = {},
+    } = safeOfficialData
 
     const totalPages = Math.max(1, Math.ceil(total / pageSize))
-    const router = useRouter()
+
+    const lobbyistOptions = [
+        { value: "", label: "All Lobbyists" },
+        ...lobbyists.map((l) => ({ value: l, label: l })),
+    ]
+    const currentLobbyist =
+        lobbyistOptions.find(
+            (opt) => opt.value === currentFilters.lobbyistFilter
+        ) || lobbyistOptions[0]
+
+    const methodOptions = useMemo(
+        () => methods.map((m) => ({ value: m, label: m })),
+        [methods]
+    )
+    const selectedMethods = useMemo(() => {
+        if (Array.isArray(currentFilters.methodFilter)) {
+            return currentFilters.methodFilter
+        } else if (
+            typeof currentFilters.methodFilter === "string" &&
+            currentFilters.methodFilter
+        ) {
+            return [currentFilters.methodFilter]
+        }
+        return []
+    }, [currentFilters.methodFilter])
+    const selectedMethodOptions = useMemo(
+        () =>
+            methodOptions.filter((opt) => selectedMethods.includes(opt.value)),
+        [methodOptions, selectedMethods]
+    )
+    const [pendingMethods, setPendingMethods] = useState(selectedMethodOptions)
+    useEffect(() => {
+        setPendingMethods(selectedMethodOptions)
+    }, [selectedMethodOptions])
+
+    if (!officialData) return <div>Official not found</div>
 
     const handleFilterChange = (filterName, value) => {
         let newQuery = { ...router.query, [filterName]: value, page: 1 }
@@ -100,43 +141,6 @@ export default function OfficialPage({ officialData }) {
             query: { ...router.query, page: newPage },
         })
     }
-
-    // Setup react‑select options for the lobbyist filter.
-    const lobbyistOptions = [
-        { value: "", label: "All Lobbyists" },
-        ...lobbyists.map((l) => ({ value: l, label: l })),
-    ]
-    const currentLobbyist =
-        lobbyistOptions.find(
-            (opt) => opt.value === currentFilters.lobbyistFilter
-        ) || lobbyistOptions[0]
-
-    // Memoize method options and selected values for performance
-    const methodOptions = useMemo(
-        () => methods.map((m) => ({ value: m, label: m })),
-        [methods]
-    )
-    const selectedMethods = useMemo(() => {
-        if (Array.isArray(currentFilters.methodFilter)) {
-            return currentFilters.methodFilter
-        } else if (
-            typeof currentFilters.methodFilter === "string" &&
-            currentFilters.methodFilter
-        ) {
-            return [currentFilters.methodFilter]
-        }
-        return []
-    }, [currentFilters.methodFilter])
-    const selectedMethodOptions = useMemo(
-        () =>
-            methodOptions.filter((opt) => selectedMethods.includes(opt.value)),
-        [methodOptions, selectedMethods]
-    )
-    // Grafana-style: Only update filter on dropdown close
-    const [pendingMethods, setPendingMethods] = useState(selectedMethodOptions)
-    useEffect(() => {
-        setPendingMethods(selectedMethodOptions)
-    }, [selectedMethodOptions])
 
     return (
         <>

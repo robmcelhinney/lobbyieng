@@ -21,17 +21,22 @@ export default function ConnectionsOfficial() {
     const [methods, setMethods] = useState([])
     const [selectedMethod, setSelectedMethod] = useState("All")
 
-    const LEGEND_CATEGORIES = [
-        { label: "1 lobbying return", min: 1, max: 1, color: "#1bc98e" },
-        { label: "2 lobbying returns", min: 2, max: 2, color: "#3da5d9" },
-        { label: "3 lobbying returns", min: 3, max: 3, color: "#fbb13c" },
-        {
-            label: "4 or more lobbying returns",
-            min: 4,
-            max: Infinity,
-            color: "#d7263d",
-        },
-    ]
+    // Wrap LEGEND_CATEGORIES in useMemo to avoid recreating on every render
+    const LEGEND_CATEGORIES = React.useMemo(
+        () => [
+            { label: "1 lobbying return", min: 1, max: 1, color: "#1bc98e" },
+            { label: "2 lobbying returns", min: 2, max: 2, color: "#3da5d9" },
+            { label: "3 lobbying returns", min: 3, max: 3, color: "#fbb13c" },
+            {
+                label: "4 or more lobbying returns",
+                min: 4,
+                max: Infinity,
+                color: "#d7263d",
+            },
+        ],
+        []
+    )
+
     const [selectedCategories, setSelectedCategories] = useState([0, 1, 2, 3])
 
     const visibleNodeIds = React.useMemo(() => {
@@ -256,8 +261,8 @@ export default function ConnectionsOfficial() {
                 setLoading(false)
             }
         }
-        if (slug) fetchLatestYearAndMethodAndData()
-    }, [slug])
+        if (officialSlug) fetchLatestYearAndMethodAndData()
+    }, [officialSlug])
 
     useEffect(() => {
         async function fetchFilters() {
@@ -278,8 +283,8 @@ export default function ConnectionsOfficial() {
                 setMethods([])
             }
         }
-        if (slug) fetchFilters()
-    }, [slug])
+        if (officialSlug) fetchFilters()
+    }, [officialSlug])
 
     useEffect(() => {
         if (years.length > 0) {
@@ -378,8 +383,8 @@ export default function ConnectionsOfficial() {
                 setLoading(false)
             }
         }
-        if (selectedYear && !loading && slug) fetchConnections()
-    }, [selectedYear, selectedMethod, slug])
+        if (selectedYear && !loading && officialSlug) fetchConnections()
+    }, [selectedYear, selectedMethod, loading, officialSlug])
 
     const getLinkColor = (link) => {
         if (link.count >= 4) return "#d7263d"

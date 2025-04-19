@@ -73,7 +73,12 @@ export default function OfficialsPage({ officials: initialOfficials }) {
 
     const toggleTitle = (title) => {
         const updated = new Set(selectedTitles)
-        updated.has(title) ? updated.delete(title) : updated.add(title)
+        // Fix: always call delete/add, not a conditional expression
+        if (updated.has(title)) {
+            updated.delete(title)
+        } else {
+            updated.add(title)
+        }
         setSelectedTitles(updated)
     }
 
