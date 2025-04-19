@@ -92,7 +92,7 @@ npm run dev
 
 ## 🙏 Acknowledgements
 
-Thanks to the Register of Lobbying at lobbying.ie for providing open, official data on Irish lobbying activity, which makes this project possible.
+Thanks to the Register of Lobbying at (lobbying.ie)[https://www.lobbying.ie] for providing open, official data on Irish lobbying activity, which makes this project possible.
 
 ## 🤝 Contributing
 
