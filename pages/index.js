@@ -6,6 +6,31 @@ export default function Home() {
         <>
             <Head>
                 <title>Lobbyieng</title>
+                <meta
+                    name="description"
+                    content="Lobbyieng visualises lobbying activity in Ireland. Search, browse, and explore lobbying records, officials, and lobbyists."
+                />
+                <meta property="og:title" content="Lobbyieng" />
+                <meta
+                    property="og:description"
+                    content="Visualise and explore Irish lobbying activity, officials, and lobbyists."
+                />
+                <meta property="og:type" content="website" />
+                <meta property="og:url" content="https://lobbyieng.com/" />
+                <meta
+                    property="og:image"
+                    content="/android-chrome-512x512.png"
+                />
+                <meta name="twitter:card" content="summary_large_image" />
+                <meta name="twitter:title" content="Lobbyieng" />
+                <meta
+                    name="twitter:description"
+                    content="Visualise and explore Irish lobbying activity, officials, and lobbyists."
+                />
+                <meta
+                    name="twitter:image"
+                    content="/android-chrome-512x512.png"
+                />
             </Head>
             <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
                 <header className="bg-blue-900 dark:bg-gray-800 text-white dark:text-cb-dark-text py-4 shadow">

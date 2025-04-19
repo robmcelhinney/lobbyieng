@@ -174,6 +174,10 @@ export default async function handler(req, res) {
             .filter((off) => off && off.slug)
             .sort((a, b) => a.name.localeCompare(b.name))
 
+        res.setHeader(
+            "Cache-Control",
+            "public, max-age=3600, stale-while-revalidate=60"
+        )
         res.status(200).json(officials)
     } catch (err) {
         console.error("Error in officials index API:", err)

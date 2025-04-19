@@ -21,6 +21,10 @@ export default async function handler(req, res) {
                     p.trim() &&
                     p.trim().toLowerCase() !== "false"
             )
+        res.setHeader(
+            "Cache-Control",
+            "public, max-age=3600, stale-while-revalidate=60"
+        )
         res.status(200).json({ periods })
     } catch (err) {
         res.status(500).json({

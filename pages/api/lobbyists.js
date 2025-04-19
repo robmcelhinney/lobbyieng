@@ -26,6 +26,10 @@ export default async function handler(req, res) {
             .map((row) => row.lobbyist_name)
             .filter((name) => name)
             .sort((a, b) => a.localeCompare(b))
+        res.setHeader(
+            "Cache-Control",
+            "public, max-age=3600, stale-while-revalidate=60"
+        )
         res.status(200).json(lobbyists)
     } catch (err) {
         console.error("Error in lobbyists API:", err)

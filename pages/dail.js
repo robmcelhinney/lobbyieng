@@ -82,6 +82,31 @@ export default function Index({
         <>
             <Head>
                 <title>Lobbyieng - Dáil</title>
+                <meta
+                    name="description"
+                    content="Search and explore Irish Dáil members and lobbying activity. Filter by period, name, and job title."
+                />
+                <meta property="og:title" content="Lobbyieng - Dáil" />
+                <meta
+                    property="og:description"
+                    content="Search and explore Irish Dáil members and lobbying activity. Filter by period, name, and job title."
+                />
+                <meta property="og:type" content="website" />
+                <meta property="og:url" content="https://lobbyieng.com/dail" />
+                <meta
+                    property="og:image"
+                    content="/android-chrome-512x512.png"
+                />
+                <meta name="twitter:card" content="summary_large_image" />
+                <meta name="twitter:title" content="Lobbyieng - Dáil" />
+                <meta
+                    name="twitter:description"
+                    content="Search and explore Irish Dáil members and lobbying activity. Filter by period, name, and job title."
+                />
+                <meta
+                    name="twitter:image"
+                    content="/android-chrome-512x512.png"
+                />
             </Head>
             <div className="min-h-screen bg-cb-light-background dark:bg-cb-dark-background text-cb-light-text dark:text-cb-dark-text">
                 {isLoading && (
