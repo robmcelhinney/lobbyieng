@@ -6,7 +6,7 @@ import Head from "next/head"
 export async function getServerSideProps() {
     let latestPeriod = null
     try {
-        const res = await fetch("http://localhost:3000/api/periods-latest")
+        const res = await fetch("/api/periods-latest")
         if (!res.ok) throw new Error("Failed to fetch latest period")
         const { period } = await res.json()
         latestPeriod = period
@@ -17,9 +17,7 @@ export async function getServerSideProps() {
 
     try {
         const res = await fetch(
-            `http://localhost:3000/api/officials?period=${encodeURIComponent(
-                latestPeriod
-            )}`
+            `/api/officials?period=${encodeURIComponent(latestPeriod)}`
         )
         if (!res.ok) throw new Error("API failed")
         const officials = await res.json()

@@ -12,23 +12,24 @@ const topOfficialsTitles = [
     "Tánaiste and Minister",
 ]
 
-export async function getServerSideProps() {
+export async function getServerSideProps(context) {
+    const baseUrl =
+        process.env.NEXT_PUBLIC_BASE_URL ||
+        (context.req ? `https://${context.req.headers.host}` : "")
     try {
-        const periodsRes = await fetch("http://localhost:3000/api/periods")
+        const periodsRes = await fetch(`${baseUrl}/api/periods`)
         const periodsJson = periodsRes.ok
             ? await periodsRes.json()
             : { periods: [] }
         const allPeriods = periodsJson.periods || []
 
-        const latestRes = await fetch(
-            "http://localhost:3000/api/periods-latest"
-        )
+        const latestRes = await fetch(`${baseUrl}/api/periods-latest`)
         const latestJson = latestRes.ok ? await latestRes.json() : {}
         const latestPeriod = latestJson.period || allPeriods.at(-1) || ""
 
         const jobTitlesParam = topOfficialsTitles.join(",")
         const res = await fetch(
-            `http://localhost:3000/api/officials?period=${encodeURIComponent(
+            `${baseUrl}/api/officials?period=${encodeURIComponent(
                 latestPeriod
             )}&job_titles=${encodeURIComponent(jobTitlesParam)}`
         )

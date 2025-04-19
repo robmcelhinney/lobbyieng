@@ -23,14 +23,15 @@ function toQueryString(query) {
     return params.join("&")
 }
 
-export async function getServerSideProps({ params, query }) {
+export async function getServerSideProps({ params, query, req }) {
+    const baseUrl =
+        process.env.NEXT_PUBLIC_BASE_URL ||
+        (req ? `https://${req.headers.host}` : "")
     if (!params || !params.slug) {
         return { notFound: true }
     }
     const res = await fetch(
-        `http://localhost:3000/api/lobbyists/${params.slug}?${toQueryString(
-            query
-        )}`
+        `${baseUrl}/api/lobbyists/${params.slug}?${toQueryString(query)}`
     )
     if (!res.ok) {
         return { notFound: true }
@@ -40,8 +41,6 @@ export async function getServerSideProps({ params, query }) {
         props: { lobbyistData },
     }
 }
-
-// …imports remain unchanged…
 
 export default function LobbyistPage({ lobbyistData }) {
     const router = useRouter()
