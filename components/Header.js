@@ -1,32 +1,58 @@
 import Link from "next/link"
 import Image from "next/image"
 import { useTheme } from "./ThemeContext"
+import { useState } from "react"
 
 export default function Header() {
   const { theme, toggleTheme } = useTheme()
+  const [menuOpen, setMenuOpen] = useState(false)
   return (
-    <header className="bg-blue-900 py-4 shadow">
-      <div className="max-w-6xl mx-auto px-4 flex items-center justify-between">
+    <header className="bg-blue-900 py-2 shadow">
+      <div className="max-w-6xl mx-auto px-2 sm:px-4 flex items-center justify-between">
         <Link href="/" legacyBehavior>
-          <a>
-            <Image src="/images/logo.png" alt="Logo" width={120} height={120} />
+          <a className="flex-shrink-0 flex items-center" style={{ minWidth: 0 }}>
+            <div className="relative" style={{ width: 120, height: 80 }}>
+              <Image
+                src="/images/logo.png"
+                alt="Logo"
+                layout="fill"
+                objectFit="contain"
+                sizes="(max-width: 640px) 96px, 80px"
+                priority
+              />
+            </div>
           </a>
         </Link>
-        <nav className="flex gap-6 items-center">
+        {/* Hamburger for mobile */}
+        <button
+          className="sm:hidden ml-2 p-2 rounded text-white focus:outline-none focus:ring-2 focus:ring-white"
+          onClick={() => setMenuOpen((v) => !v)}
+          aria-label="Toggle navigation menu"
+        >
+          <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        {/* Navigation */}
+        <nav
+          className={`${
+            menuOpen ? "flex" : "hidden"
+          } sm:flex flex-col sm:flex-row gap-4 sm:gap-6 items-center absolute sm:static top-16 left-0 w-full sm:w-auto bg-blue-900 sm:bg-transparent z-20 px-4 sm:px-0 py-4 sm:py-0 transition-all`}
+        >
           <Link href="/dail" legacyBehavior>
-            <a className="text-white text-lg font-semibold hover:underline">Find a TD</a>
+            <a className="text-white text-base sm:text-lg font-semibold hover:underline py-1">Find a TD</a>
           </Link>
           <Link href="/officials" legacyBehavior>
-            <a className="text-white text-lg font-semibold hover:underline">All Officials</a>
+            <a className="text-white text-base sm:text-lg font-semibold hover:underline py-1">All Officials</a>
           </Link>
           <Link href="/lobbyists" legacyBehavior>
-            <a className="text-white text-lg font-semibold hover:underline">Find a Lobbyist</a>
+            <a className="text-white text-base sm:text-lg font-semibold hover:underline py-1">Find a Lobbyist</a>
           </Link>
           <a
             href="https://github.com/robmcelhinney/lobbyieng/"
             target="_blank"
             rel="noopener noreferrer"
-            className="ml-2 text-white hover:text-gray-300"
+            className="ml-0 sm:ml-2 text-white hover:text-gray-300 py-1"
             aria-label="GitHub Repository"
           >
             <svg height="24" width="24" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
@@ -35,7 +61,7 @@ export default function Header() {
           </a>
           <button
             onClick={toggleTheme}
-            className="ml-4 px-3 py-1 rounded bg-gray-200 dark:bg-gray-800 text-cb-light-text dark:text-cb-dark-text dark:text-gray-100 border border-gray-400 dark:border-gray-700 transition"
+            className="ml-0 sm:ml-4 px-3 py-1 rounded bg-gray-200 dark:bg-gray-800 text-cb-light-text dark:text-cb-dark-text dark:text-gray-100 border border-gray-400 dark:border-gray-700 transition mt-2 sm:mt-0"
             aria-label="Toggle dark mode"
           >
             {theme === "dark" ? "🌙 Dark" : "☀️ Light"}
