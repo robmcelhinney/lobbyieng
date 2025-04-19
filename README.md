@@ -23,9 +23,11 @@ Lobbyieng visualises lobbying activity in Ireland. It scrapes the official Regis
 
 -   Node.js ≥14
 -   npm or yarn
+-   Python ≥3.8
 -   SQLite3
+-   Required Python packages: `sqlalchemy`, `requests`
 
-### Installation
+### Clone & Install
 
 ```bash
 git clone https://github.com/robmcelhinney/lobbyieng.git
@@ -33,24 +35,36 @@ cd lobbyieng
 npm install     # or yarn
 ```
 
-### Database
+### 📦 Build the Database (`lobbying.db`)
 
-Place `lobbying.db` at project root. To rebuild:
+1. Select relevant data from https://www.lobbying.ie/app/home/search by using CSV export
+1. Store CSVs in the `data/` directory.
+1. Run the parser to ingest CSVs into SQLite:
+
+    ```bash
+    python parser.py
+    ```
+
+    - This script (`parser.py`) drops and recreates tables, normalises names, and populates:
+        - `lobbying_records`
+        - `dpo_entries`
+        - `lobbying_activity_entries`
+
+1. After ingesting, indexes are created automatically for faster queries.
+
+### 🖼️ Fetch Dáil Thumbnails (optional)
+
+To download member images into `td_thumbnails/`:
 
 ```bash
-# assuming SQL and source CSVs in /data
-npm run build-db
+python download-dail-images.py
 ```
 
-### Environment
-
-No env vars required for local dev. API binds to port 3000.
-
-### Run
+### Run the App
 
 ```bash
 npm run dev
-# http://localhost:3000
+# Visit http://localhost:3000
 ```
 
 ## 🛠️ API Endpoints
@@ -79,10 +93,10 @@ npm run dev
 ## 🤝 Contributing
 
 1. Fork it
-2. Create a branch (`git checkout -b feature/XYZ`)
-3. Commit (`git commit -m "feat: add XYZ"`)
-4. Push (`git push origin feature/XYZ`)
-5. Open a PR
+1. Create a branch (`git checkout -b feature/XYZ`)
+1. Commit (`git commit -m "feat: add XYZ"`)
+1. Push (`git push origin feature/XYZ`)
+1. Open a PR
 
 ## 📜 License
 
