@@ -64,19 +64,19 @@ export default function LobbyistsPage({ lobbyists: initialLobbyists, allPeriods,
   const [isLoading, setIsLoading] = useState(false)
   // Update lobbyists when period changes
   useEffect(() => {
-    if (!selectedPeriod) return
-    setIsLoading(true)
     async function fetchLobbyists() {
-      const url = selectedPeriod
+      setIsLoading(true);
+      const url = selectedPeriod && selectedPeriod !== "All"
         ? `/api/lobbyists?period=${encodeURIComponent(selectedPeriod)}`
-        : `/api/lobbyists?period=All`
-      const res = await fetch(url)
-      const names = res.ok ? await res.json() : []
-      setLobbyists(names.map((name) => ({ name, slug: slugify(name) })))
-      setSelectedName(null) // Reset name filter on period change
-      setIsLoading(false)
+        : `/api/lobbyists?period=All`;
+      const res = await fetch(url);
+      const names = res.ok ? await res.json() : [];
+      setLobbyists(names.map((name) => ({ name, slug: slugify(name) })));
+      setSelectedName(null); // Reset name filter on period change
+      setIsLoading(false);
     }
-    fetchLobbyists()
+
+    fetchLobbyists();
   }, [selectedPeriod])
   // Filtered list
   const filtered = selectedName ? lobbyists.filter((l) => l.name === selectedName.value) : lobbyists
@@ -106,7 +106,7 @@ export default function LobbyistsPage({ lobbyists: initialLobbyists, allPeriods,
               <label className="block text-sm font-medium text-cb-light-text dark:text-cb-dark-text mb-1">Period</label>
               <select
                 value={selectedPeriod}
-                onChange={(e) => setSelectedPeriod(e.target.value)}
+                onChange={(e) => setSelectedPeriod(e.target.value || "All")}
                 className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 shadow-sm bg-white dark:bg-gray-700 text-cb-light-text dark:text-cb-dark-text focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">All Periods</option>
