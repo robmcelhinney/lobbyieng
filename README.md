@@ -1,6 +1,12 @@
-**Lobbyieng**
+# Lobbyieng
 
 Lobbyieng visualises lobbying activity in Ireland. It scrapes the official Register of Lobbying, links records to elected officials, and presents it in a searchable, interactive UI.
+
+## Screenshots
+
+![Dashboard with filter controls](assets/images/dashboard.png)
+
+![Interactive graph of connections](assets/images/graph-view.png)
 
 ## 🚀 Features
 
