@@ -10,7 +10,7 @@ const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
 export default function ConnectionsOfficial() {
   const router = useRouter()
   const { slug } = router.query
-  const officialSlug = slug || "simon-harris"
+  const officialSlug = slug ? String(slug).trim().toLowerCase() : ""
 
   const [graphData, setGraphData] = useState({ nodes: [], links: [] })
   const fgRef = useRef()
@@ -81,7 +81,7 @@ export default function ConnectionsOfficial() {
 
   useEffect(() => {
     async function fetchLatestYearAndMethodAndData() {
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (context.req ? `https://${context.req.headers.host}` : "")
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (req ? `https://${req.headers.host}` : "")
       try {
         const res = await fetch(`${baseUrl}/api/periods-latest`)
         let latestYear = null
@@ -95,7 +95,9 @@ export default function ConnectionsOfficial() {
         }
         let latestMethod = null
         if (latestYear) {
-          const res2 = await fetch(`/api/officials/${officialSlug}?per_page=All&year=${encodeURIComponent(latestYear)}`)
+          const res2 = await fetch(
+            `${baseUrl}/api/officials/${officialSlug}?per_page=All&year=${encodeURIComponent(latestYear)}`
+          )
           if (!res2.ok) throw new Error("Official not found or failed to fetch data")
           const data2 = await res2.json()
           if (data2.methods && data2.methods.length > 0) {
@@ -161,7 +163,7 @@ export default function ConnectionsOfficial() {
           setLoading(true)
           setError(null)
           const res3 = await fetch(
-            `/api/officials/${officialSlug}?per_page=All&year=${encodeURIComponent(
+            `${baseUrl}/api/officials/${officialSlug}?per_page=All&year=${encodeURIComponent(
               latestYear
             )}&method=${encodeURIComponent(latestMethod)}`
           )
@@ -220,7 +222,7 @@ export default function ConnectionsOfficial() {
   useEffect(() => {
     async function fetchFilters() {
       try {
-        const res = await fetch(`/api/officials/${officialSlug}?per_page=All`)
+        const res = await fetch(`${baseUrl}/api/officials/${officialSlug}?per_page=All`)
         if (!res.ok) throw new Error("Official not found or failed to fetch filters")
         const data = await res.json()
         setYears(data.years || [])
@@ -267,7 +269,7 @@ export default function ConnectionsOfficial() {
         const yearParam = selectedYear && selectedYear !== "All" ? `&year=${encodeURIComponent(selectedYear)}` : ""
         const methodParam =
           selectedMethod && selectedMethod !== "All" ? `&method=${encodeURIComponent(selectedMethod)}` : ""
-        const res = await fetch(`/api/officials/${officialSlug}?per_page=All${yearParam}${methodParam}`)
+        const res = await fetch(`${baseUrl}/api/officials/${officialSlug}?per_page=All${yearParam}${methodParam}`)
         if (!res.ok) throw new Error("Official not found or failed to fetch data")
         const data = await res.json()
         const centralName = data.name || officialSlug.replace(/-/g, " ")
