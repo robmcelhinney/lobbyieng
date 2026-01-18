@@ -1,0 +1,7 @@
+node_modules
+.next
+.git
+lobbying.db
+Dockerfile
+docker-compose.yml
+README.md

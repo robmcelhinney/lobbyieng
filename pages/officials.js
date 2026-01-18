@@ -3,10 +3,12 @@ import Link from "next/link"
 import Select from "react-select"
 import Head from "next/head"
 
-export async function getServerSideProps() {
+export async function getServerSideProps({ req }) {
+  const baseUrl =
+    process.env.INTERNAL_BASE_URL || process.env.NEXT_PUBLIC_BASE_URL || (req ? `https://${req.headers.host}` : "")
   let latestPeriod = null
   try {
-    const res = await fetch("/api/periods-latest")
+    const res = await fetch(`${baseUrl}/api/periods-latest`)
     if (!res.ok) throw new Error("Failed to fetch latest period")
     const { period } = await res.json()
     latestPeriod = period
@@ -16,7 +18,9 @@ export async function getServerSideProps() {
   }
 
   try {
-    const res = await fetch(`/api/officials?period=${encodeURIComponent(latestPeriod)}`)
+    // Always use latestPeriod for initial fetch, never 'All'
+    const periodParam = latestPeriod ? `period=${encodeURIComponent(latestPeriod)}` : ""
+    const res = await fetch(`${baseUrl}/api/officials?${periodParam}`)
     if (!res.ok) throw new Error("API failed")
     const officials = await res.json()
     return { props: { officials } }

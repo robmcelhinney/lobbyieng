@@ -13,7 +13,10 @@ const topOfficialsTitles = [
 ]
 
 export async function getServerSideProps(context) {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (context.req ? `https://${context.req.headers.host}` : "")
+  const baseUrl =
+    process.env.INTERNAL_BASE_URL ||
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    (context.req ? `https://${context.req.headers.host}` : "")
   try {
     const periodsRes = await fetch(`${baseUrl}/api/periods`)
     const periodsJson = periodsRes.ok ? await periodsRes.json() : { periods: [] }

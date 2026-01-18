@@ -14,7 +14,8 @@ function slugify(name) {
 }
 
 export async function getServerSideProps({ req }) {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (req ? `https://${req.headers.host}` : "")
+  const baseUrl =
+    process.env.INTERNAL_BASE_URL || process.env.NEXT_PUBLIC_BASE_URL || (req ? `https://${req.headers.host}` : "")
   try {
     // Fetch all unique periods
     const periodsRes = await fetch(`${baseUrl}/api/officials?period=All`)

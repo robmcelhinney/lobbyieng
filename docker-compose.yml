@@ -1,0 +1,11 @@
+services:
+  web:
+    build: .
+    container_name: lobbyieng
+    restart: always
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=production
+      # Force internal server-side fetches to use HTTP
+      - INTERNAL_BASE_URL=http://localhost:3000
