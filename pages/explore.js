@@ -52,7 +52,7 @@ function SectionCard({ title, subtitle, controls, children }) {
   )
 }
 
-function RankList({ items, valueKey, nameKey = "name", linkPrefix, emptyLabel = "No data found." }) {
+function RankList({ items, valueKey, nameKey = "name", linkPrefix, emptyLabel = "No data found.", loading = false }) {
   const [mode, setMode] = useState("top10")
   const [visibleCount, setVisibleCount] = useState(10)
 
@@ -60,6 +60,10 @@ function RankList({ items, valueKey, nameKey = "name", linkPrefix, emptyLabel = 
     setMode("top10")
     setVisibleCount(10)
   }, [items, valueKey, nameKey])
+
+  if (loading) {
+    return <p className="text-sm text-muted-ui">Loading data...</p>
+  }
 
   if (!items?.length) {
     return <p className="text-sm text-muted-ui">{emptyLabel}</p>
@@ -339,7 +343,7 @@ export default function ExplorePage() {
                 />
               }
             >
-              <RankList items={officialContactItems} valueKey="contact_count" linkPrefix="/officials" />
+              <RankList items={officialContactItems} valueKey="contact_count" linkPrefix="/officials" loading={loading} />
               <CompactBarChart items={officialContactItems} valueKey="contact_count" title="Contact count" />
             </SectionCard>
 
@@ -357,7 +361,7 @@ export default function ExplorePage() {
                 />
               }
             >
-              <RankList items={lobbyistActivityItems} valueKey="return_count" linkPrefix="/lobbyists" />
+              <RankList items={lobbyistActivityItems} valueKey="return_count" linkPrefix="/lobbyists" loading={loading} />
               <CompactBarChart items={lobbyistActivityItems} valueKey="return_count" title="Return count" />
             </SectionCard>
 
@@ -375,7 +379,7 @@ export default function ExplorePage() {
                 />
               }
             >
-              <RankList items={moversItems} valueKey="delta" linkPrefix={moversLinkPrefix} />
+              <RankList items={moversItems} valueKey="delta" linkPrefix={moversLinkPrefix} loading={loading} />
               <CompactBarChart items={moversItems} valueKey="delta" title="Delta" type="delta" />
             </SectionCard>
 
@@ -393,23 +397,36 @@ export default function ExplorePage() {
                 />
               }
             >
-              <RankList items={centralityItems} valueKey="degree" linkPrefix={centralityLinkPrefix} />
+              <RankList items={centralityItems} valueKey="degree" linkPrefix={centralityLinkPrefix} loading={loading} />
               <CompactBarChart items={centralityItems} valueKey="degree" title="Degree" />
             </SectionCard>
 
             <SectionCard title="Top Policy Areas" subtitle={latestPeriod || ""}>
-              <RankList items={data?.top_policy_areas_latest || []} valueKey="return_count" linkPrefix={null} />
+              <RankList
+                items={data?.top_policy_areas_latest || []}
+                valueKey="return_count"
+                linkPrefix={null}
+                loading={loading}
+              />
               <CompactBarChart items={data?.top_policy_areas_latest || []} valueKey="return_count" title="Return count" />
             </SectionCard>
 
             <SectionCard title="Top Keywords" subtitle="Simple tokenization and stemming">
-              <RankList items={data?.top_keywords_latest || []} valueKey="count" nameKey="token" linkPrefix={null} />
+              <RankList
+                items={data?.top_keywords_latest || []}
+                valueKey="count"
+                nameKey="token"
+                linkPrefix={null}
+                loading={loading}
+              />
               <CompactBarChart items={data?.top_keywords_latest || []} valueKey="count" nameKey="token" title="Token count" />
             </SectionCard>
           </div>
 
           <SectionCard title="Shared Lobbyists Between Officials" subtitle={latestPeriod || ""}>
-            {data?.shared_lobbyists_latest?.length ? (
+            {loading ? (
+              <p className="text-sm text-muted-ui">Loading data...</p>
+            ) : data?.shared_lobbyists_latest?.length ? (
               <ul className="space-y-2">
                 {data.shared_lobbyists_latest.map((row, idx) => (
                   <li
