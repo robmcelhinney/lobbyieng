@@ -1,15 +1,20 @@
 import os
 import glob
 import csv
+import json
+import re
+import sqlite3
 import unicodedata
 from collections import defaultdict, Counter
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, Text, text, ForeignKey
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 # --- Config ---
 DATA_FOLDER = "data"  # Folder containing CSV files.
 DATABASE_URL = "sqlite:///lobbying.db"
+DERIVED_FOLDER = os.path.join("data", "derived")
+PRECOMPUTED_INSIGHTS_PATH = os.path.join(DERIVED_FOLDER, "explore_insights.json")
 
 BANNED_NAMES = [
     "Skill Set Strategy Consultants", 
@@ -59,6 +64,13 @@ for canonical, variants in NAME_CANONICALIZATION.items():
     for v in variants:
         NAME_VARIANT_TO_CANONICAL[to_ascii(v)] = canonical
 
+STOPWORDS = {
+    "the", "and", "for", "with", "from", "that", "this", "into", "their", "about", "were", "was", "are", "has",
+    "have", "had", "been", "will", "would", "could", "should", "its", "our", "out", "new", "all", "any", "can",
+    "not", "who", "carried", "activity", "activities", "lobbying", "lobbied", "regarding", "relation", "related",
+    "support", "policy", "programme", "public", "matter", "matters"
+}
+
 # --- Database Setup ---
 Base = declarative_base()
 
@@ -104,7 +116,7 @@ class LobbyingActivityEntry(Base):
 
     lobbying_record = relationship("LobbyingRecord", back_populates="activity_entries")
 
-engine = create_engine(DATABASE_URL, echo=True)
+engine = create_engine(DATABASE_URL, echo=False)
 Base.metadata.drop_all(engine)
 Base.metadata.create_all(engine)
 Session = sessionmaker(bind=engine)
@@ -129,6 +141,319 @@ def normalize_person_name(raw):
     if ascii_name in NAME_VARIANT_TO_CANONICAL:
         return NAME_VARIANT_TO_CANONICAL[ascii_name]
     return name
+
+def slugify(value):
+    value = unicodedata.normalize("NFD", str(value or ""))
+    value = "".join(ch for ch in value if unicodedata.category(ch) != "Mn")
+    value = value.lower().strip()
+    value = re.sub(r"[^a-z0-9]+", "-", value)
+    value = re.sub(r"-+", "-", value)
+    return value.strip("-")
+
+def normalize_token(raw):
+    lowered = unicodedata.normalize("NFD", str(raw or ""))
+    lowered = "".join(ch for ch in lowered if unicodedata.category(ch) != "Mn")
+    lowered = re.sub(r"[^a-z0-9]", "", lowered.lower())
+    if len(lowered) < 3 or lowered.isdigit() or lowered in STOPWORDS:
+        return ""
+    stem = lowered
+    if stem.endswith("ies") and len(stem) > 4:
+        stem = f"{stem[:-3]}y"
+    elif stem.endswith("ing") and len(stem) > 5:
+        stem = stem[:-3]
+    elif stem.endswith("ed") and len(stem) > 4:
+        stem = stem[:-2]
+    elif stem.endswith("es") and len(stem) > 4:
+        stem = stem[:-2]
+    elif stem.endswith("s") and len(stem) > 3:
+        stem = stem[:-1]
+    return stem if len(stem) >= 3 else ""
+
+def biggest_movers(current_rows, previous_rows):
+    merged = {}
+    for row in previous_rows:
+        merged[row["name"]] = {"name": row["name"], "previous": row["contact_count"], "current": 0}
+    for row in current_rows:
+        existing = merged.get(row["name"], {"name": row["name"], "previous": 0, "current": 0})
+        existing["current"] = row["contact_count"]
+        merged[row["name"]] = existing
+    result = []
+    for row in merged.values():
+        delta = row["current"] - row["previous"]
+        if delta == 0:
+            continue
+        result.append({
+            "name": row["name"],
+            "previous": row["previous"],
+            "current": row["current"],
+            "delta": delta,
+            "slug": slugify(row["name"])
+        })
+    result.sort(key=lambda r: (-r["delta"], -r["current"], r["name"]))
+    return result[:20]
+
+def rows_with_slug(rows):
+    return [{**row, "slug": slugify(row["name"])} for row in rows]
+
+def build_explore_precomputed():
+    conn = sqlite3.connect("lobbying.db")
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    try:
+        periods = cur.execute(
+            """
+            SELECT period, MAX(date_published) AS latest_date
+            FROM lobbying_records
+            WHERE period IS NOT NULL AND TRIM(period) != ''
+            GROUP BY period
+            ORDER BY latest_date DESC
+            """
+        ).fetchall()
+
+        latest_period = periods[0]["period"] if periods else None
+        previous_period = periods[1]["period"] if len(periods) > 1 else None
+
+        def fetch_rows(query, params=()):
+            return [dict(r) for r in cur.execute(query, params).fetchall()]
+
+        top_targets_latest = fetch_rows(
+            """
+            SELECT dpo.person_name AS name, COUNT(DISTINCT lr.id) AS contact_count
+            FROM dpo_entries dpo
+            JOIN lobbying_records lr ON lr.id = dpo.lobbying_record_id
+            WHERE lr.period = ? AND dpo.person_name IS NOT NULL AND TRIM(dpo.person_name) != ''
+            GROUP BY dpo.person_name
+            ORDER BY contact_count DESC, dpo.person_name ASC
+            LIMIT 20
+            """,
+            (latest_period,),
+        ) if latest_period else []
+
+        top_targets_last_year = fetch_rows(
+            """
+            SELECT dpo.person_name AS name, COUNT(DISTINCT lr.id) AS contact_count
+            FROM dpo_entries dpo
+            JOIN lobbying_records lr ON lr.id = dpo.lobbying_record_id
+            WHERE lr.date_published >= datetime('now', '-1 year')
+              AND dpo.person_name IS NOT NULL
+              AND TRIM(dpo.person_name) != ''
+            GROUP BY dpo.person_name
+            ORDER BY contact_count DESC, dpo.person_name ASC
+            LIMIT 20
+            """
+        )
+
+        top_lobbyists_latest = fetch_rows(
+            """
+            SELECT
+              lr.lobbyist_name AS name,
+              COUNT(DISTINCT lr.id) AS return_count,
+              COUNT(DISTINCT dpo.person_name) AS unique_targets
+            FROM lobbying_records lr
+            LEFT JOIN dpo_entries dpo ON dpo.lobbying_record_id = lr.id
+            WHERE lr.period = ? AND lr.lobbyist_name IS NOT NULL AND TRIM(lr.lobbyist_name) != ''
+            GROUP BY lr.lobbyist_name
+            ORDER BY return_count DESC, unique_targets DESC, lr.lobbyist_name ASC
+            LIMIT 20
+            """,
+            (latest_period,),
+        ) if latest_period else []
+
+        most_active_lobbyists = fetch_rows(
+            """
+            SELECT
+              lr.lobbyist_name AS name,
+              COUNT(DISTINCT lr.id) AS return_count,
+              COUNT(DISTINCT dpo.person_name) AS unique_targets
+            FROM lobbying_records lr
+            LEFT JOIN dpo_entries dpo ON dpo.lobbying_record_id = lr.id
+            WHERE lr.lobbyist_name IS NOT NULL AND TRIM(lr.lobbyist_name) != ''
+            GROUP BY lr.lobbyist_name
+            ORDER BY return_count DESC, unique_targets DESC, lr.lobbyist_name ASC
+            LIMIT 20
+            """
+        )
+
+        current_official_counts = fetch_rows(
+            """
+            SELECT dpo.person_name AS name, COUNT(DISTINCT lr.id) AS contact_count
+            FROM dpo_entries dpo
+            JOIN lobbying_records lr ON lr.id = dpo.lobbying_record_id
+            WHERE lr.period = ? AND dpo.person_name IS NOT NULL AND TRIM(dpo.person_name) != ''
+            GROUP BY dpo.person_name
+            """,
+            (latest_period,),
+        ) if latest_period else []
+
+        previous_official_counts = fetch_rows(
+            """
+            SELECT dpo.person_name AS name, COUNT(DISTINCT lr.id) AS contact_count
+            FROM dpo_entries dpo
+            JOIN lobbying_records lr ON lr.id = dpo.lobbying_record_id
+            WHERE lr.period = ? AND dpo.person_name IS NOT NULL AND TRIM(dpo.person_name) != ''
+            GROUP BY dpo.person_name
+            """,
+            (previous_period,),
+        ) if previous_period else []
+
+        current_lobbyist_counts = fetch_rows(
+            """
+            SELECT lr.lobbyist_name AS name, COUNT(DISTINCT lr.id) AS contact_count
+            FROM lobbying_records lr
+            WHERE lr.period = ? AND lr.lobbyist_name IS NOT NULL AND TRIM(lr.lobbyist_name) != ''
+            GROUP BY lr.lobbyist_name
+            """,
+            (latest_period,),
+        ) if latest_period else []
+
+        previous_lobbyist_counts = fetch_rows(
+            """
+            SELECT lr.lobbyist_name AS name, COUNT(DISTINCT lr.id) AS contact_count
+            FROM lobbying_records lr
+            WHERE lr.period = ? AND lr.lobbyist_name IS NOT NULL AND TRIM(lr.lobbyist_name) != ''
+            GROUP BY lr.lobbyist_name
+            """,
+            (previous_period,),
+        ) if previous_period else []
+
+        top_policy_areas_latest = fetch_rows(
+            """
+            SELECT public_policy_area AS name, COUNT(*) AS return_count
+            FROM lobbying_records
+            WHERE period = ? AND public_policy_area IS NOT NULL AND TRIM(public_policy_area) != ''
+            GROUP BY public_policy_area
+            ORDER BY return_count DESC, public_policy_area ASC
+            LIMIT 20
+            """,
+            (latest_period,),
+        ) if latest_period else []
+
+        keyword_rows = fetch_rows(
+            """
+            SELECT
+              COALESCE(subject_matter, '') AS subject_matter,
+              COALESCE(intended_results, '') AS intended_results,
+              COALESCE(specific_details, '') AS specific_details,
+              COALESCE(relevant_matter, '') AS relevant_matter
+            FROM lobbying_records
+            WHERE period = ?
+            """,
+            (latest_period,),
+        ) if latest_period else []
+
+        keyword_counts = Counter()
+        for row in keyword_rows:
+            text_blob = " ".join([
+                row.get("subject_matter", ""),
+                row.get("intended_results", ""),
+                row.get("specific_details", ""),
+                row.get("relevant_matter", ""),
+            ])
+            for raw in text_blob.split():
+                token = normalize_token(raw)
+                if token:
+                    keyword_counts[token] += 1
+
+        top_keywords_latest = [
+            {"token": token, "count": count}
+            for token, count in sorted(keyword_counts.items(), key=lambda x: (-x[1], x[0]))[:30]
+        ]
+
+        official_centrality_latest = fetch_rows(
+            """
+            WITH edges AS (
+              SELECT DISTINCT dpo.person_name AS official, lr.lobbyist_name AS lobbyist
+              FROM lobbying_records lr
+              JOIN dpo_entries dpo ON dpo.lobbying_record_id = lr.id
+              WHERE lr.period = ?
+                AND dpo.person_name IS NOT NULL AND TRIM(dpo.person_name) != ''
+                AND lr.lobbyist_name IS NOT NULL AND TRIM(lr.lobbyist_name) != ''
+            )
+            SELECT official AS name, COUNT(DISTINCT lobbyist) AS degree
+            FROM edges
+            GROUP BY official
+            ORDER BY degree DESC, official ASC
+            LIMIT 20
+            """,
+            (latest_period,),
+        ) if latest_period else []
+
+        lobbyist_centrality_latest = fetch_rows(
+            """
+            WITH edges AS (
+              SELECT DISTINCT dpo.person_name AS official, lr.lobbyist_name AS lobbyist
+              FROM lobbying_records lr
+              JOIN dpo_entries dpo ON dpo.lobbying_record_id = lr.id
+              WHERE lr.period = ?
+                AND dpo.person_name IS NOT NULL AND TRIM(dpo.person_name) != ''
+                AND lr.lobbyist_name IS NOT NULL AND TRIM(lr.lobbyist_name) != ''
+            )
+            SELECT lobbyist AS name, COUNT(DISTINCT official) AS degree
+            FROM edges
+            GROUP BY lobbyist
+            ORDER BY degree DESC, lobbyist ASC
+            LIMIT 20
+            """,
+            (latest_period,),
+        ) if latest_period else []
+
+        shared_lobbyists_latest = fetch_rows(
+            """
+            WITH edges AS (
+              SELECT DISTINCT dpo.person_name AS official, lr.lobbyist_name AS lobbyist
+              FROM lobbying_records lr
+              JOIN dpo_entries dpo ON dpo.lobbying_record_id = lr.id
+              WHERE lr.period = ?
+                AND dpo.person_name IS NOT NULL AND TRIM(dpo.person_name) != ''
+                AND lr.lobbyist_name IS NOT NULL AND TRIM(lr.lobbyist_name) != ''
+            )
+            SELECT
+              e1.official AS official_a,
+              e2.official AS official_b,
+              COUNT(*) AS shared_lobbyists
+            FROM edges e1
+            JOIN edges e2
+              ON e1.lobbyist = e2.lobbyist
+             AND e1.official < e2.official
+            GROUP BY e1.official, e2.official
+            ORDER BY shared_lobbyists DESC, e1.official ASC, e2.official ASC
+            LIMIT 20
+            """,
+            (latest_period,),
+        ) if latest_period else []
+
+        payload = {
+            "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "latest_period": latest_period,
+            "previous_period": previous_period,
+            "top_targets_latest": rows_with_slug(top_targets_latest),
+            "top_targets_last_year": rows_with_slug(top_targets_last_year),
+            "top_lobbyists_latest": rows_with_slug(top_lobbyists_latest),
+            "most_active_lobbyists": rows_with_slug(most_active_lobbyists),
+            "biggest_mover_officials": biggest_movers(current_official_counts, previous_official_counts),
+            "biggest_mover_lobbyists": biggest_movers(current_lobbyist_counts, previous_lobbyist_counts),
+            "top_policy_areas_latest": top_policy_areas_latest,
+            "top_keywords_latest": top_keywords_latest,
+            "official_centrality_latest": rows_with_slug(official_centrality_latest),
+            "lobbyist_centrality_latest": rows_with_slug(lobbyist_centrality_latest),
+            "shared_lobbyists_latest": [
+                {
+                    **row,
+                    "official_a_slug": slugify(row["official_a"]),
+                    "official_b_slug": slugify(row["official_b"])
+                }
+                for row in shared_lobbyists_latest
+            ],
+            "search_term": "",
+            "search_results": []
+        }
+
+        os.makedirs(DERIVED_FOLDER, exist_ok=True)
+        with open(PRECOMPUTED_INSIGHTS_PATH, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False)
+        print(f"Wrote precomputed insights: {PRECOMPUTED_INSIGHTS_PATH}")
+    finally:
+        conn.close()
 
 # --- Data Extraction & Normalization ---
 def fetch_and_parse_csv_from_file(file_path):
@@ -285,6 +610,13 @@ if __name__ == "__main__":
     run_pipeline()
     with engine.connect() as conn:
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_dpo_person_name ON dpo_entries(person_name)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_dpo_person_name_record ON dpo_entries(person_name, lobbying_record_id)"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_dpo_lobbying_record_id ON dpo_entries(lobbying_record_id)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_lr_period ON lobbying_records(period)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_lr_lobbyist_name ON lobbying_records(lobbyist_name)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_lr_period_date ON lobbying_records(period, date_published)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_lr_lobbyist_period_date ON lobbying_records(lobbyist_name, period, date_published)"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_activity_lobbying_record_id ON lobbying_activity_entries(lobbying_record_id)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_activity_record_activity ON lobbying_activity_entries(lobbying_record_id, activity)"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_lr_date_published ON lobbying_records(date_published)"))
+    build_explore_precomputed()

@@ -1,5 +1,4 @@
-import sqlite3 from "sqlite3"
-import { open } from "sqlite"
+import { getDb } from "../../../../lib/sqlite"
 
 // Slugify function matching pages/api/officials/[slug].js
 function slugify(name) {
@@ -18,10 +17,7 @@ export default async function handler(req, res) {
     return
   }
   try {
-    const db = await open({
-      filename: process.cwd() + "/lobbying.db",
-      driver: sqlite3.Database
-    })
+    const db = await getDb()
     // Resolve canonical official name from dpo_entries
     const rows = await db.all(`SELECT DISTINCT person_name FROM dpo_entries`)
     let canonical = null

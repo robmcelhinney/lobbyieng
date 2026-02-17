@@ -1,5 +1,4 @@
-import sqlite3 from "sqlite3"
-import { open } from "sqlite"
+import { getDb } from "../../../lib/sqlite"
 
 function slugify(name) {
   return name
@@ -12,10 +11,7 @@ function slugify(name) {
 
 export default async function handler(req, res) {
   try {
-    const db = await open({
-      filename: "./lobbying.db",
-      driver: sqlite3.Database
-    })
+    const db = await getDb()
 
     const { period, job_titles } = req.query
     // Parse job_titles from comma-separated string to array

@@ -1,13 +1,9 @@
 // /api/periods.js - Returns all available periods from the database
-import sqlite3 from "sqlite3"
-import { open } from "sqlite"
+import { getDb } from "../../lib/sqlite"
 
 export default async function handler(req, res) {
   try {
-    const db = await open({
-      filename: "./lobbying.db",
-      driver: sqlite3.Database
-    })
+    const db = await getDb()
     // Get all unique periods, ordered by date_published ascending
     const rows = await db.all(
       `SELECT DISTINCT period FROM lobbying_records WHERE period IS NOT NULL AND period != '' ORDER BY date_published ASC`

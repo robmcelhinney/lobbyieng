@@ -1,6 +1,6 @@
-import sqlite3 from "sqlite3"
+import { getDb } from "../../lib/sqlite"
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   const { official, officials, lobbyist, start_year, end_year } = req.query
   // Support multiple officials as comma-separated string or array
   let officialsList = []
@@ -34,13 +34,6 @@ export default function handler(req, res) {
     dateParams.push(end_year)
   }
 
-  const db = new sqlite3.Database("lobbying.db", sqlite3.OPEN_READONLY, (err) => {
-    if (err) {
-      res.status(500).json({ error: "Failed to open database" })
-      return
-    }
-  })
-
   let sql, params
   if (officialsList.length > 0) {
     // All lobbyists and their connections to these officials
@@ -67,12 +60,9 @@ export default function handler(req, res) {
     params = [lobbyist, ...dateParams]
   }
 
-  db.all(sql, params, (err, rows) => {
-    if (err) {
-      res.status(500).json({ error: "Database query failed" })
-      db.close()
-      return
-    }
+  try {
+    const db = await getDb()
+    const rows = await db.all(sql, params)
     let records
     if (officialsList.length > 0) {
       // Group by lobbyist, but include all officials in dpo_entries
@@ -98,6 +88,7 @@ export default function handler(req, res) {
       ]
     }
     res.status(200).json(records || [])
-    db.close()
-  })
+  } catch {
+    res.status(500).json({ error: "Database query failed" })
+  }
 }

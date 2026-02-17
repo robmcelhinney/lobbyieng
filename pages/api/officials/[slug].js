@@ -1,5 +1,4 @@
-import sqlite3 from "sqlite3"
-import { open } from "sqlite"
+import { getDb } from "../../../lib/sqlite"
 import { buildCacheKey, readCache, writeCache } from "../../../lib/serverCache"
 
 function slugify(name) {
@@ -53,10 +52,7 @@ export default async function handler(req, res) {
     }
     const offset = (page - 1) * perPageNum
 
-    const db = await open({
-      filename: "./lobbying.db",
-      driver: sqlite3.Database
-    })
+    const db = await getDb()
 
     // Parse job_titles from comma-separated string to array
     let allowedJobTitles = null

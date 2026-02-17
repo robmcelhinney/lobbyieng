@@ -1,19 +1,11 @@
-import sqlite3 from "sqlite3"
+import { getDb } from "../../../lib/sqlite"
 
-export default function handler(req, res) {
-  const db = new sqlite3.Database("lobbying.db", sqlite3.OPEN_READONLY, (err) => {
-    if (err) {
-      res.status(500).json({ error: "Failed to open database" })
-      return
-    }
-  })
-  db.all("SELECT DISTINCT person_name FROM dpo_entries", [], (err, rows) => {
-    if (err) {
-      res.status(500).json({ error: "Database query failed" })
-      db.close()
-      return
-    }
+export default async function handler(req, res) {
+  try {
+    const db = await getDb()
+    const rows = await db.all("SELECT DISTINCT person_name FROM dpo_entries")
     res.status(200).json(rows)
-    db.close()
-  })
+  } catch {
+    res.status(500).json({ error: "Database query failed" })
+  }
 }

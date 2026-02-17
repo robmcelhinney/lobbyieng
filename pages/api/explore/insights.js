@@ -1,5 +1,5 @@
-import sqlite3 from "sqlite3"
-import { open } from "sqlite"
+import { getDb } from "../../../lib/sqlite"
+import { loadExplorePrecomputed } from "../../../lib/explorePrecomputed"
 import { buildCacheKey, readCache, writeCache } from "../../../lib/serverCache"
 
 const STOPWORDS = new Set([
@@ -119,10 +119,67 @@ export default async function handler(req, res) {
       return
     }
 
-    const db = await open({
-      filename: "./lobbying.db",
-      driver: sqlite3.Database
-    })
+    const precomputed = await loadExplorePrecomputed()
+    if (precomputed) {
+      if (searchTerm.length < 2) {
+        const payload = {
+          ...precomputed,
+          search_term: "",
+          search_results: []
+        }
+        writeCache(cacheKey, payload, 5 * 60 * 1000)
+        res.setHeader("X-Data-Cache", "MISS")
+        res.setHeader("Cache-Control", "public, max-age=3600, stale-while-revalidate=120")
+        res.status(200).json(payload)
+        return
+      }
+
+      const db = await getDb()
+      const searchResults = await db.all(
+        `
+        SELECT
+          lr.id,
+          lr.url,
+          lr.period,
+          lr.date_published,
+          lr.lobbyist_name,
+          COALESCE(lr.subject_matter, '') AS subject_matter,
+          COALESCE(lr.intended_results, '') AS intended_results,
+          GROUP_CONCAT(DISTINCT dpo.person_name) AS officials
+        FROM lobbying_records lr
+        LEFT JOIN dpo_entries dpo ON dpo.lobbying_record_id = lr.id
+        WHERE (
+          LOWER(COALESCE(lr.subject_matter, '')) LIKE LOWER(?)
+          OR LOWER(COALESCE(lr.intended_results, '')) LIKE LOWER(?)
+          OR LOWER(COALESCE(lr.specific_details, '')) LIKE LOWER(?)
+          OR LOWER(COALESCE(lr.relevant_matter, '')) LIKE LOWER(?)
+          OR LOWER(COALESCE(lr.public_policy_area, '')) LIKE LOWER(?)
+        )
+        GROUP BY lr.id
+        ORDER BY lr.date_published DESC
+        LIMIT 50
+        `,
+        Array(5).fill(`%${searchTerm}%`)
+      )
+
+      const payload = {
+        ...precomputed,
+        generated_at: new Date().toISOString(),
+        search_term: searchTerm,
+        search_results: searchResults.map((row) => ({
+          ...row,
+          lobbyist_slug: slugify(row.lobbyist_name || ""),
+          officials: row.officials ? String(row.officials).split(",").filter(Boolean) : []
+        }))
+      }
+      writeCache(cacheKey, payload, 5 * 60 * 1000)
+      res.setHeader("X-Data-Cache", "MISS")
+      res.setHeader("Cache-Control", "public, max-age=3600, stale-while-revalidate=120")
+      res.status(200).json(payload)
+      return
+    }
+
+    const db = await getDb()
 
     const periods = await db.all(
       `
