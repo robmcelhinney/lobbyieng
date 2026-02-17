@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
+    "build:db": "uv run python parser.py",
     "start": "next start",
     "lint": "next lint",
     "format": "prettier --write .",

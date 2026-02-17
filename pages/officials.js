@@ -1,11 +1,11 @@
-import { useState, useRef, useEffect } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import Select from "react-select"
 import Head from "next/head"
+import { getServerBaseUrl } from "../lib/serverBaseUrl"
 
 export async function getServerSideProps({ req }) {
-  const baseUrl =
-    process.env.INTERNAL_BASE_URL || process.env.NEXT_PUBLIC_BASE_URL || (req ? `https://${req.headers.host}` : "")
+  const baseUrl = getServerBaseUrl(req)
   let latestPeriod = null
   try {
     const res = await fetch(`${baseUrl}/api/periods-latest`)
@@ -31,9 +31,7 @@ export async function getServerSideProps({ req }) {
 }
 
 export default function OfficialsPage({ officials: initialOfficials }) {
-  const [selectedTitles, setSelectedTitles] = useState(new Set())
-  const [dropdownOpen, setDropdownOpen] = useState(false)
-  const [titleSearchInput, setTitleSearchInput] = useState("")
+  const [selectedTitles, setSelectedTitles] = useState([])
   const [allPeriods, setAllPeriods] = useState([])
   const [selectedPeriod, setSelectedPeriod] = useState("")
   const [officials, setOfficials] = useState(initialOfficials)
@@ -71,31 +69,13 @@ export default function OfficialsPage({ officials: initialOfficials }) {
     )
   )
 
-  const toggleTitle = (title) => {
-    const updated = new Set(selectedTitles)
-    // Fix: always call delete/add, not a conditional expression
-    if (updated.has(title)) {
-      updated.delete(title)
-    } else {
-      updated.add(title)
-    }
-    setSelectedTitles(updated)
-  }
-
-  const dropdownRef = useRef(null)
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setDropdownOpen(false)
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
+  const titleOptions = uniqueTitles.map((title) => ({ value: title, label: title }))
+  const selectedTitleValues = selectedTitles.map((option) => option.value)
 
   const filtered = officials.filter((o) => {
     const nameMatch = selectedName ? o.name === selectedName.value : true
-    const titleMatch = selectedTitles.size === 0 || [...selectedTitles].some((title) => o.job_title?.includes(title))
+    const titleMatch =
+      selectedTitleValues.length === 0 || selectedTitleValues.some((title) => (o.job_title || "").includes(title))
     return nameMatch && titleMatch
   })
 
@@ -107,77 +87,55 @@ export default function OfficialsPage({ officials: initialOfficials }) {
       <Head>
         <title>Lobbyieng - All Officials</title>
       </Head>
-      <div className="min-h-screen bg-cb-light-background dark:bg-cb-dark-background text-cb-light-text dark:text-cb-dark-text">
+      <div className="min-h-screen">
         {isLoading && (
           <div className="w-full h-1 bg-blue-200 dark:bg-blue-900">
             <div className="h-1 bg-blue-600 dark:bg-blue-400 animate-pulse w-full"></div>
           </div>
         )}
-        <header className="bg-blue-900 dark:bg-gray-800 text-white dark:text-cb-dark-text py-4 shadow">
-          <div className="max-w-6xl mx-auto px-4 text-center">
-            <h1 className="text-4xl font-bold">All Elected Officials</h1>
-            <p className="mt-2 text-lg">Browse and filter all officials by job title, period, or name.</p>
+        <header className="hero-shell">
+          <div className="max-w-7xl mx-auto px-4 py-8">
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight">All Officials</h1>
+            <p className="hero-subtitle mt-2">Filter by period, title, and name to inspect current activity patterns.</p>
           </div>
         </header>
-        <main className="max-w-6xl mx-auto px-4 py-8">
-          <div className="bg-white dark:bg-gray-800 rounded-md shadow-md p-6 mb-6">
+        <main className="max-w-7xl mx-auto px-4 py-8">
+          <div className="surface-card mb-6">
             <div className="flex flex-wrap gap-6">
               {/* Job Title Filter */}
-              <div className="relative" ref={dropdownRef}>
-                <label className="block mb-1 text-sm font-medium text-cb-light-text dark:text-cb-dark-text">
-                  Job Title
-                </label>
-                <button
-                  onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="w-64 border border-gray-300 dark:border-gray-600 rounded-md px-4 py-2 text-left bg-white dark:bg-gray-700 text-cb-light-text dark:text-cb-dark-text shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {selectedTitles.size ? [...selectedTitles].join(", ") : "Filter by Job Title"}
-                </button>
-                {dropdownOpen && (
-                  <div className="absolute mt-2 w-64 max-h-64 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg z-10 p-3 space-y-1">
-                    <input
-                      type="text"
-                      placeholder="Search titles..."
-                      value={titleSearchInput}
-                      onChange={(e) => setTitleSearchInput(e.target.value)}
-                      className="w-full px-2 py-1 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-cb-light-text dark:text-cb-dark-text focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <div className="text-right text-sm">
-                      <button
-                        onClick={() => setSelectedTitles(new Set())}
-                        className="text-red-500 dark:text-red-400 hover:underline"
-                      >
-                        Clear
-                      </button>
-                    </div>
-                    {uniqueTitles
-                      .filter((title) => title.toLowerCase().includes(titleSearchInput.toLowerCase()))
-                      .map((title) => (
-                        <label
-                          key={title}
-                          className="block text-sm font-medium text-cb-light-text dark:text-cb-dark-text mb-1"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedTitles.has(title)}
-                            onChange={() => toggleTitle(title)}
-                            className="mr-2"
-                          />
-                          {title}
-                        </label>
-                      ))}
-                  </div>
-                )}
+              <div className="w-72 accent-blue-600 dark:accent-blue-400">
+                <label className="block mb-1 text-sm font-semibold text-muted-ui">Job Title</label>
+                <Select
+                  options={titleOptions}
+                  value={selectedTitles}
+                  onChange={(values) => setSelectedTitles(values || [])}
+                  isMulti
+                  isClearable
+                  closeMenuOnSelect={false}
+                  placeholder="Filter job titles..."
+                  styles={{
+                    control: (base) => ({
+                      ...base,
+                      backgroundColor: "rgba(255,255,255,0.85)",
+                      borderColor: "var(--ui-border)",
+                      color: "var(--ui-text)"
+                    }),
+                    menu: (base) => ({
+                      ...base,
+                      backgroundColor: "var(--ui-surface)",
+                      color: "var(--ui-text)",
+                      zIndex: 9999
+                    })
+                  }}
+                />
               </div>
               {/* Period Filter */}
               <div className="w-50">
-                <label className="block mb-1 text-sm font-medium text-cb-light-text dark:text-cb-dark-text">
-                  Period
-                </label>
+                <label className="block mb-1 text-sm font-semibold text-muted-ui">Period</label>
                 <select
                   value={selectedPeriod}
                   onChange={(e) => setSelectedPeriod(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-cb-light-text dark:text-cb-dark-text focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-[var(--ui-border)] rounded-md shadow-sm bg-white/80 dark:bg-slate-900/30 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">All Periods</option>
                   {allPeriods.map((period) => (
@@ -189,7 +147,7 @@ export default function OfficialsPage({ officials: initialOfficials }) {
               </div>
               {/* Name Filter */}
               <div className="w-64 accent-blue-600 dark:accent-blue-400">
-                <label className="block mb-1 text-sm font-medium text-cb-light-text dark:text-cb-dark-text">Name</label>
+                <label className="block mb-1 text-sm font-semibold text-muted-ui">Name</label>
                 <Select
                   options={nameOptions}
                   value={selectedName}
@@ -199,14 +157,14 @@ export default function OfficialsPage({ officials: initialOfficials }) {
                   styles={{
                     control: (base) => ({
                       ...base,
-                      backgroundColor: "hsl(var(--cb-light-background))",
-                      borderColor: "#CBD5E0",
-                      color: "#111"
+                      backgroundColor: "rgba(255,255,255,0.85)",
+                      borderColor: "var(--ui-border)",
+                      color: "var(--ui-text)"
                     }),
                     menu: (base) => ({
                       ...base,
-                      backgroundColor: "#fff",
-                      color: "#111",
+                      backgroundColor: "var(--ui-surface)",
+                      color: "var(--ui-text)",
                       zIndex: 9999
                     })
                   }}
@@ -214,28 +172,26 @@ export default function OfficialsPage({ officials: initialOfficials }) {
               </div>
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-md shadow-md p-6">
+          <div className="surface-card">
             <h2 className="text-2xl font-semibold mb-4">Officials ({isLoading ? "..." : deduped.length} results)</h2>
             {isLoading ? (
-              <div className="text-center text-blue-600 dark:text-blue-300 py-8">Loading officials...</div>
+              <div className="text-center text-blue-600 py-8">Loading officials...</div>
             ) : deduped.length > 0 ? (
               <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {deduped.map((official) => (
-                  <li
-                    key={official.slug}
-                    className="border border-gray-300 dark:border-gray-600 rounded-md p-4 bg-white dark:bg-gray-700 hover:shadow transition"
-                  >
-                    <Link legacyBehavior href={`/officials/${official.slug}`}>
-                      <a>
-                        <h3 className="font-bold text-cb-light-text dark:text-cb-dark-text">{official.name}</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">{official.job_title}</p>
-                      </a>
+                  <li key={official.slug}>
+                    <Link
+                      href={`/officials/${official.slug}`}
+                      className="surface-card card-interactive no-underline block min-h-[120px]"
+                    >
+                      <h3 className="font-bold">{official.name}</h3>
+                      <p className="text-sm text-muted-ui mt-1">{official.job_title}</p>
                     </Link>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-center text-gray-500 dark:text-gray-400">No results found.</p>
+              <p className="text-center text-muted-ui">No results found.</p>
             )}
           </div>
         </main>

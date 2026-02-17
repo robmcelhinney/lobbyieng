@@ -69,7 +69,6 @@ export default async function handler(req, res) {
       SELECT COUNT(DISTINCT lr.id) AS total
       FROM lobbying_records lr
       WHERE LOWER(lr.lobbyist_name) = ?
-        AND lr.intended_results IS NOT NULL AND TRIM(lr.intended_results) != ''
       ${filterConditions}
     `
     const countRow = await db.get(countQuery, [canonical.toLowerCase(), ...filterParams])
@@ -90,7 +89,6 @@ export default async function handler(req, res) {
         ) AS activities
       FROM lobbying_records lr
       WHERE LOWER(lr.lobbyist_name) = ?
-        AND lr.intended_results IS NOT NULL AND TRIM(lr.intended_results) != ''
       ${filterConditions}
       ORDER BY lr.date_published DESC
       LIMIT ? OFFSET ?
@@ -144,7 +142,6 @@ export default async function handler(req, res) {
         ) AS activities
       FROM lobbying_records lr
       WHERE LOWER(lr.lobbyist_name) = ?
-        AND lr.intended_results IS NOT NULL AND TRIM(lr.intended_results) != ''
     `
     const allRaw = await db.all(allRecordsQuery, [canonical.toLowerCase()])
     const allRecords = allRaw.map((r) => ({

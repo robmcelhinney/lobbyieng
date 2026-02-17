@@ -3,6 +3,7 @@ import Head from "next/head"
 import Select from "react-select"
 import LobbyingCardLobbyist from "../../components/LobbyingCardLobbyist"
 import { useState, useEffect, useMemo } from "react"
+import { getServerBaseUrl } from "../../lib/serverBaseUrl"
 
 function toQueryString(query) {
   const params = []
@@ -18,7 +19,7 @@ function toQueryString(query) {
 }
 
 export async function getServerSideProps({ params, query, req }) {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (req ? `https://${req.headers.host}` : "")
+  const baseUrl = getServerBaseUrl(req)
   if (!params || !params.slug) {
     return { notFound: true }
   }
@@ -42,6 +43,7 @@ export default function LobbyistPage({ lobbyistData, fetchError }) {
   const router = useRouter()
   const {
     name,
+    slug,
     records = [],
     total = 0,
     page = 1,
@@ -72,17 +74,33 @@ export default function LobbyistPage({ lobbyistData, fetchError }) {
     [methodOptions, selectedMethods]
   )
   const [pendingMethods, setPendingMethods] = useState(selectedMethodOptions)
+  const [copyStatus, setCopyStatus] = useState("")
   useEffect(() => {
     setPendingMethods(selectedMethodOptions)
   }, [selectedMethodOptions])
 
+  const selectStyles = {
+    control: (base) => ({
+      ...base,
+      backgroundColor: "rgba(255,255,255,0.85)",
+      borderColor: "var(--ui-border)",
+      color: "var(--ui-text)"
+    }),
+    menu: (base) => ({
+      ...base,
+      backgroundColor: "var(--ui-surface)",
+      color: "var(--ui-text)",
+      zIndex: 9999
+    })
+  }
+
   if (fetchError) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-cb-light-background dark:bg-cb-dark-background text-cb-light-text dark:text-cb-dark-text">
-        <div className="bg-white dark:bg-gray-800 rounded shadow p-8 text-center">
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="surface-card text-center">
           <h1 className="text-2xl font-bold mb-2">Error loading lobbyist data</h1>
-          <p className="mb-4 text-red-600 dark:text-red-400">{fetchError}</p>
-          <button className="px-4 py-2 bg-blue-500 text-white rounded" onClick={() => router.reload()}>
+          <p className="mb-4 text-red-600">{fetchError}</p>
+          <button className="px-4 py-2 rounded-md bg-[color:var(--ui-primary)] text-white" onClick={() => router.reload()}>
             Retry
           </button>
         </div>
@@ -113,57 +131,79 @@ export default function LobbyistPage({ lobbyistData, fetchError }) {
     })
   }
 
+  const buildPermalinkPath = () => {
+    const params = new URLSearchParams()
+    if (currentFilters?.officialFilter) params.set("official", currentFilters.officialFilter)
+    if (currentFilters?.yearFilter) params.set("year", currentFilters.yearFilter)
+
+    const methodFilter = currentFilters?.methodFilter
+    if (Array.isArray(methodFilter)) {
+      methodFilter.filter(Boolean).forEach((m) => params.append("method", m))
+    } else if (typeof methodFilter === "string" && methodFilter) {
+      params.append("method", methodFilter)
+    }
+    if (Number(page) > 1) params.set("page", String(page))
+
+    const queryString = params.toString()
+    return `/lobbyists/${slug}${queryString ? `?${queryString}` : ""}`
+  }
+
+  const copyPermalink = async () => {
+    if (typeof window === "undefined") return
+    const href = `${window.location.origin}${buildPermalinkPath()}`
+    try {
+      await navigator.clipboard.writeText(href)
+      setCopyStatus("Link copied")
+    } catch {
+      setCopyStatus("Copy failed")
+    }
+    setTimeout(() => setCopyStatus(""), 1600)
+  }
+
   return (
     <>
       <Head>
         <title>{`Lobbyist - ${name}`}</title>
       </Head>
-      <div className="min-h-screen bg-cb-light-background dark:bg-cb-dark-background text-cb-light-text dark:text-cb-dark-text">
-        <header className="bg-blue-900 dark:bg-gray-800 text-white dark:text-gray-100 py-4 shadow">
-          <div className="max-w-6xl mx-auto px-4 text-center">
-            <h1 className="text-4xl font-bold">{name}</h1>
-            <p className="mt-2 text-lg">
+      <div className="min-h-screen">
+        <header className="hero-shell">
+          <div className="max-w-7xl mx-auto px-4 py-8 text-center">
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight">{name}</h1>
+            <p className="hero-subtitle mt-2">
               Total Lobbying Efforts: <span className="font-semibold">{total}</span>
             </p>
+            <button
+              type="button"
+              onClick={copyPermalink}
+              className="inline-block mt-4 px-4 py-2 rounded-md border border-white/60 text-white hover:bg-white/10 transition font-semibold text-sm"
+            >
+              Copy link to this view
+            </button>
+            {copyStatus ? <p className="text-xs mt-2 text-blue-100">{copyStatus}</p> : null}
           </div>
         </header>
-        <main className="max-w-6xl mx-auto px-4 py-8">
-          <div className="bg-white dark:bg-gray-800 rounded-md shadow p-4 mb-6 flex flex-col sm:flex-row gap-6 items-center">
+        <main className="max-w-7xl mx-auto px-4 py-8">
+          <div className="surface-card mb-6 flex flex-col sm:flex-row gap-6 items-end">
             {/* Official filter */}
             <div className="w-64 accent-blue-600 dark:accent-blue-400">
-              <label className="block mb-1 text-sm font-medium text-cb-light-text dark:text-cb-dark-text">
-                Official
-              </label>
+              <label className="block mb-1 text-sm font-semibold text-muted-ui">Official</label>
               <Select
                 options={officialOptions}
                 value={currentOfficial}
                 onChange={(option) => handleFilterChange("official", option.value)}
                 isSearchable
                 placeholder="Search officials..."
-                styles={{
-                  control: (base) => ({
-                    ...base,
-                    backgroundColor: "hsl(var(--cb-light-background))",
-                    borderColor: "#CBD5E0",
-                    color: "#111"
-                  }),
-                  menu: (base) => ({
-                    ...base,
-                    backgroundColor: "#fff",
-                    color: "#111",
-                    zIndex: 9999
-                  })
-                }}
+                styles={selectStyles}
               />
             </div>
 
             {/* Year filter */}
             <div className="w-32">
-              <label className="block mb-1 text-sm font-medium text-cb-light-text dark:text-cb-dark-text">Year</label>
+              <label className="block mb-1 text-sm font-semibold text-muted-ui">Year</label>
               <select
                 value={currentFilters.yearFilter || ""}
                 onChange={(e) => handleFilterChange("year", e.target.value)}
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-cb-light-text dark:text-cb-dark-text focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-[var(--ui-border)] rounded-md px-3 py-2 bg-white/80 dark:bg-slate-900/30 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">All Years</option>
                 {years.map((y) => (
@@ -176,7 +216,7 @@ export default function LobbyistPage({ lobbyistData, fetchError }) {
 
             {/* Method filter */}
             <div className="w-64 accent-blue-600 dark:accent-blue-400">
-              <label className="block mb-1 text-sm font-medium text-cb-light-text dark:text-cb-dark-text">Method</label>
+              <label className="block mb-1 text-sm font-semibold text-muted-ui">Method</label>
               <Select
                 options={methodOptions}
                 value={pendingMethods}
@@ -186,20 +226,7 @@ export default function LobbyistPage({ lobbyistData, fetchError }) {
                 closeMenuOnSelect={false}
                 menuPlacement="auto"
                 placeholder="Select methods..."
-                styles={{
-                  control: (base) => ({
-                    ...base,
-                    backgroundColor: "hsl(var(--cb-light-background))",
-                    borderColor: "#CBD5E0",
-                    color: "#111"
-                  }),
-                  menu: (base) => ({
-                    ...base,
-                    backgroundColor: "#fff",
-                    color: "#111",
-                    zIndex: 9999
-                  })
-                }}
+                styles={selectStyles}
                 menuPortalTarget={typeof window !== "undefined" ? document.body : undefined}
                 onMenuOpen={() => setPendingMethods(selectedMethodOptions)}
                 onMenuClose={() => {
@@ -212,7 +239,7 @@ export default function LobbyistPage({ lobbyistData, fetchError }) {
             </div>
           </div>
 
-          <section className="bg-white dark:bg-gray-800 rounded-md shadow p-4">
+          <section className="surface-card">
             <h2 className="text-2xl font-semibold mb-4">
               Lobbying Records (Page {page} of {totalPages})
             </h2>
@@ -223,19 +250,19 @@ export default function LobbyistPage({ lobbyistData, fetchError }) {
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500 dark:text-gray-400">No records found.</p>
+              <p className="text-muted-ui">No records found.</p>
             )}
 
             {/* Pagination */}
             <div className="flex flex-wrap items-center gap-2 mt-6">
               {page > 1 && (
-                <button onClick={() => handlePageChange(page - 1)} className="px-3 py-1 bg-blue-500 text-white rounded">
+                <button onClick={() => handlePageChange(page - 1)} className="px-3 py-1 rounded-md bg-[color:var(--ui-primary)] text-white">
                   ← Prev
                 </button>
               )}
               {page > 3 && (
                 <>
-                  <button onClick={() => handlePageChange(1)} className="px-3 py-1 bg-blue-500 text-white rounded">
+                  <button onClick={() => handlePageChange(1)} className="px-3 py-1 rounded-md bg-[color:var(--ui-primary)] text-white">
                     1
                   </button>
                   {page > 4 && <span className="px-2">…</span>}
@@ -249,7 +276,7 @@ export default function LobbyistPage({ lobbyistData, fetchError }) {
                     key={p}
                     onClick={() => handlePageChange(p)}
                     className={`px-3 py-1 rounded ${
-                      p === page ? "bg-blue-700 font-bold text-white" : "bg-blue-500 text-white"
+                      p === page ? "bg-blue-800 font-bold text-white" : "bg-[color:var(--ui-primary)] text-white"
                     }`}
                   >
                     {p}
@@ -261,14 +288,14 @@ export default function LobbyistPage({ lobbyistData, fetchError }) {
                   {page < totalPages - 3 && <span className="px-2">…</span>}
                   <button
                     onClick={() => handlePageChange(totalPages)}
-                    className="px-3 py-1 bg-blue-500 text-white rounded"
+                    className="px-3 py-1 rounded-md bg-[color:var(--ui-primary)] text-white"
                   >
                     {totalPages}
                   </button>
                 </>
               )}
               {page < totalPages && (
-                <button onClick={() => handlePageChange(page + 1)} className="px-3 py-1 bg-blue-500 text-white rounded">
+                <button onClick={() => handlePageChange(page + 1)} className="px-3 py-1 rounded-md bg-[color:var(--ui-primary)] text-white">
                   Next →
                 </button>
               )}
@@ -291,9 +318,9 @@ export default function LobbyistPage({ lobbyistData, fetchError }) {
                   min="1"
                   max={totalPages}
                   defaultValue={page}
-                  className="w-16 border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-700 text-cb-light-text dark:text-cb-dark-text focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-16 border border-[var(--ui-border)] rounded-md px-2 py-1 bg-white/80 dark:bg-slate-900/30 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <button type="submit" className="ml-2 px-3 py-1 bg-blue-500 text-white rounded">
+                <button type="submit" className="ml-2 px-3 py-1 rounded-md bg-[color:var(--ui-primary)] text-white">
                   Go
                 </button>
               </form>

@@ -18,6 +18,12 @@ function extractMethod(activityStr) {
   return parts[parts.length - 1].trim()
 }
 
+function toIsoOrNull(value) {
+  if (!value) return null
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date.toISOString()
+}
+
 export default async function handler(req, res) {
   try {
     const { slug, page = 1, lobbyist, year, method, job_titles, per_page = 10 } = req.query
@@ -245,6 +251,31 @@ export default async function handler(req, res) {
           : []
     }))
 
+    // Build derived official profile metadata from all matched records.
+    const dpoProfileRows = []
+    for (const row of allRaw) {
+      const date = toIsoOrNull(row.date_published)
+      if (!date || typeof row.dpos !== "string") continue
+      const dpos = row.dpos.split("||")
+      for (const entry of dpos) {
+        const [personName, jobTitle, publicBody] = entry.split("|")
+        if (personName === canonical) {
+          dpoProfileRows.push({
+            date_published: date,
+            job_title: (jobTitle || "").trim(),
+            public_body: (publicBody || "").trim()
+          })
+        }
+      }
+    }
+
+    dpoProfileRows.sort((a, b) => new Date(b.date_published) - new Date(a.date_published))
+    const mostRecent = dpoProfileRows[0] || null
+    const firstSeen = dpoProfileRows.length ? dpoProfileRows[dpoProfileRows.length - 1].date_published : null
+    const lastSeen = dpoProfileRows.length ? dpoProfileRows[0].date_published : null
+    const distinctTitles = Array.from(new Set(dpoProfileRows.map((r) => r.job_title).filter(Boolean))).sort()
+    const distinctBodies = Array.from(new Set(dpoProfileRows.map((r) => r.public_body).filter(Boolean))).sort()
+
     // Compute unique filter options.
     const uniqueLobbyists = Array.from(new Set(allRecords.map((r) => r.lobbyist_name).filter(Boolean))).sort()
     const uniqueYears = Array.from(
@@ -261,6 +292,15 @@ export default async function handler(req, res) {
       page: parseInt(page),
       pageSize: returnAll ? records.length : perPageNum,
       records: parsedRecords,
+      profile: {
+        name: canonical,
+        most_recent_title: mostRecent?.job_title || null,
+        most_recent_public_body: mostRecent?.public_body || null,
+        first_seen_at: firstSeen,
+        last_seen_at: lastSeen,
+        distinct_titles: distinctTitles,
+        distinct_public_bodies: distinctBodies
+      },
       lobbyists: uniqueLobbyists,
       years: uniqueYears,
       methods: uniqueMethods,

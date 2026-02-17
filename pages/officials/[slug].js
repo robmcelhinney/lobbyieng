@@ -4,6 +4,18 @@ import Select from "react-select"
 import LobbyingCard from "../../components/LobbyingCard"
 import { useState, useEffect, useMemo } from "react"
 import Image from "next/image"
+import { getServerBaseUrl } from "../../lib/serverBaseUrl"
+
+function formatDate(value) {
+  if (!value) return "Unavailable"
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return "Unavailable"
+  return date.toLocaleDateString("en-IE", {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  })
+}
 
 function toQueryString(query) {
   const params = []
@@ -19,7 +31,7 @@ function toQueryString(query) {
 }
 
 export async function getServerSideProps({ params, query, req }) {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (req ? `https://${req.headers.host}` : "")
+  const baseUrl = getServerBaseUrl(req)
   if (!params || !params.slug) {
     return { notFound: true }
   }
@@ -65,6 +77,7 @@ export default function OfficialPage({ officialData }) {
     total = 0,
     page = 1,
     pageSize = 10,
+    profile = null,
     lobbyists = [],
     years = [],
     methods = [],
@@ -91,11 +104,27 @@ export default function OfficialPage({ officialData }) {
     [methodOptions, selectedMethods]
   )
   const [pendingMethods, setPendingMethods] = useState(selectedMethodOptions)
+  const [copyStatus, setCopyStatus] = useState("")
   useEffect(() => {
     setPendingMethods(selectedMethodOptions)
   }, [selectedMethodOptions])
 
   if (!officialData) return <div>Official not found</div>
+
+  const selectStyles = {
+    control: (base) => ({
+      ...base,
+      backgroundColor: "rgba(255,255,255,0.85)",
+      color: "var(--ui-text)",
+      borderColor: "var(--ui-border)"
+    }),
+    menu: (base) => ({
+      ...base,
+      backgroundColor: "var(--ui-surface)",
+      color: "var(--ui-text)",
+      zIndex: 9999
+    })
+  }
 
   const handleFilterChange = (filterName, value) => {
     let newQuery = { ...router.query, [filterName]: value, page: 1 }
@@ -121,74 +150,157 @@ export default function OfficialPage({ officialData }) {
     })
   }
 
+  const buildPermalinkPath = () => {
+    const params = new URLSearchParams()
+    if (currentFilters.lobbyistFilter) params.set("lobbyist", currentFilters.lobbyistFilter)
+    if (currentFilters.yearFilter) params.set("year", currentFilters.yearFilter)
+
+    const methodFilter = currentFilters.methodFilter
+    if (Array.isArray(methodFilter)) {
+      methodFilter.filter(Boolean).forEach((m) => params.append("method", m))
+    } else if (typeof methodFilter === "string" && methodFilter) {
+      params.append("method", methodFilter)
+    }
+    if (Number(page) > 1) params.set("page", String(page))
+
+    const queryString = params.toString()
+    return `/officials/${slug}${queryString ? `?${queryString}` : ""}`
+  }
+
+  const copyPermalink = async () => {
+    if (typeof window === "undefined") return
+    const href = `${window.location.origin}${buildPermalinkPath()}`
+    try {
+      await navigator.clipboard.writeText(href)
+      setCopyStatus("Link copied")
+    } catch {
+      setCopyStatus("Copy failed")
+    }
+    setTimeout(() => setCopyStatus(""), 1600)
+  }
+
   return (
     <>
       <Head>
         <title>{`Official - ${name}`}</title>
       </Head>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+      <div className="min-h-screen">
         {/* Header */}
-        <header className="bg-blue-900 dark:bg-gray-800 text-white dark:text-cb-dark-text py-4 shadow">
-          <div className="max-w-6xl mx-auto px-4 text-center">
+        <header className="hero-shell">
+          <div className="max-w-7xl mx-auto px-4 py-8 text-center">
             {/* Politician Image if available */}
             <PoliticianImage slug={slug} name={name} />
-            <h1 className="text-4xl font-bold">{name}</h1>
-            <p className="mt-2 text-lg">
-              Total Lobbying Efforts: <span className="font-semibold">{total}</span>
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight">{name}</h1>
+            <p className="hero-subtitle mt-2">
+              Total lobbying returns involving this official: <span className="font-semibold">{total}</span>
             </p>
             {/* Link to Connections Graph */}
             <a
               href={`/connections/${slug}`}
-              className="inline-block mt-4 mx-2 px-4 py-2 bg-green-500 dark:bg-green-800 hover:bg-green-600 text-white dark:text-black  rounded shadow transition"
+              className="inline-block mt-4 mx-2 px-4 py-2 rounded-md bg-[color:var(--ui-accent)] text-white hover:opacity-90 transition no-underline font-semibold text-sm"
             >
               Connections Graph
             </a>
             <a
               href={`/methods/${slug}`}
-              className="inline-block mt-4 mx-2 px-4 py-2 bg-green-500 dark:bg-green-800 hover:bg-green-600 text-white dark:text-black rounded shadow transition"
+              className="inline-block mt-4 mx-2 px-4 py-2 rounded-md bg-white/90 text-slate-900 hover:bg-white transition no-underline font-semibold text-sm"
             >
               Method Pie
             </a>
+            <button
+              type="button"
+              onClick={copyPermalink}
+              className="inline-block mt-4 mx-2 px-4 py-2 rounded-md border border-white/60 text-white hover:bg-white/10 transition font-semibold text-sm"
+            >
+              Copy link to this view
+            </button>
+            {copyStatus ? <p className="text-xs mt-2 text-blue-100">{copyStatus}</p> : null}
           </div>
         </header>
 
         {/* Main Content */}
-        <main className="max-w-6xl mx-auto px-4 py-8">
+        <main className="max-w-7xl mx-auto px-4 py-8">
+          <section className="surface-card mb-6">
+            <h2 className="text-xl font-semibold mb-3">Official Profile</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="kpi-chip">
+                <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-300">Most Recent Title</div>
+                <div className="mt-1 text-sm font-semibold">{profile?.most_recent_title || "Unavailable"}</div>
+              </div>
+              <div className="kpi-chip">
+                <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-300">Most Recent Public Body</div>
+                <div className="mt-1 text-sm font-semibold">{profile?.most_recent_public_body || "Unavailable"}</div>
+              </div>
+              <div className="kpi-chip">
+                <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-300">First Seen</div>
+                <div className="mt-1 text-sm font-semibold">{formatDate(profile?.first_seen_at)}</div>
+              </div>
+              <div className="kpi-chip">
+                <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-300">Last Seen</div>
+                <div className="mt-1 text-sm font-semibold">{formatDate(profile?.last_seen_at)}</div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+              <div>
+                <h3 className="text-sm font-semibold mb-2">Observed Titles</h3>
+                {profile?.distinct_titles?.length ? (
+                  <div className="flex flex-wrap gap-2">
+                    {profile.distinct_titles.map((title) => (
+                      <span
+                        key={title}
+                        className="text-xs md:text-sm px-2.5 py-1 rounded-full border border-[var(--ui-border)] bg-white/80 dark:bg-slate-900/35"
+                      >
+                        {title}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-ui">No titles available.</p>
+                )}
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold mb-2">Observed Public Bodies</h3>
+                {profile?.distinct_public_bodies?.length ? (
+                  <div className="flex flex-wrap gap-2">
+                    {profile.distinct_public_bodies.map((body) => (
+                      <span
+                        key={body}
+                        className="text-xs md:text-sm px-2.5 py-1 rounded-full border border-[var(--ui-border)] bg-white/80 dark:bg-slate-900/35"
+                      >
+                        {body}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-ui">No public bodies available.</p>
+                )}
+              </div>
+            </div>
+          </section>
+
           {/* Filters Bar at Top */}
-          <div className="bg-white dark:bg-gray-800 rounded-md shadow p-4 mb-6 flex flex-col sm:flex-row gap-6 items-center">
+          <div className="surface-card mb-6 flex flex-col sm:flex-row gap-6 items-end">
             {/* Lobbyist Filter */}
             <div className="w-64 accent-blue-600 dark:accent-blue-400">
-              <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Lobbyist</label>
+              <label className="block mb-1 text-sm font-semibold text-muted-ui">Lobbyist</label>
               <Select
                 options={lobbyistOptions}
                 value={currentLobbyist}
                 onChange={(option) => handleFilterChange("lobbyist", option.value)}
                 isSearchable
                 placeholder="Search lobbyists..."
-                styles={{
-                  control: (base) => ({
-                    ...base,
-                    backgroundColor: "var(--cb-bg, white)",
-                    color: "var(--cb-text, black)",
-                    borderColor: "#CBD5E0"
-                  }),
-                  menu: (base) => ({
-                    ...base,
-                    backgroundColor: "var(--cb-bg, white)",
-                    color: "var(--cb-text, black)",
-                    zIndex: 9999
-                  })
-                }}
+                styles={selectStyles}
               />
             </div>
 
             {/* Year Filter */}
             <div className="w-32">
-              <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Year</label>
+              <label className="block mb-1 text-sm font-semibold text-muted-ui">Year</label>
               <select
                 value={currentFilters.yearFilter || ""}
                 onChange={(e) => handleFilterChange("year", e.target.value)}
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-[var(--ui-border)] rounded-md px-3 py-2 bg-white/80 dark:bg-slate-900/30 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">All Years</option>
                 {years.map((y) => (
@@ -201,7 +313,7 @@ export default function OfficialPage({ officialData }) {
 
             {/* Method Filter (multi-select, Grafana style: only update on close) */}
             <div className="w-64 accent-blue-600 dark:accent-blue-400">
-              <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Method</label>
+              <label className="block mb-1 text-sm font-semibold text-muted-ui">Method</label>
               <Select
                 options={methodOptions}
                 value={pendingMethods}
@@ -211,20 +323,7 @@ export default function OfficialPage({ officialData }) {
                 closeMenuOnSelect={false}
                 menuPlacement="auto"
                 placeholder="Select methods..."
-                styles={{
-                  control: (base) => ({
-                    ...base,
-                    backgroundColor: "var(--cb-bg, white)",
-                    color: "var(--cb-text, black)",
-                    borderColor: "#CBD5E0"
-                  }),
-                  menu: (base) => ({
-                    ...base,
-                    backgroundColor: "var(--cb-bg, white)",
-                    color: "var(--cb-text, black)",
-                    zIndex: 9999
-                  })
-                }}
+                styles={selectStyles}
                 menuPortalTarget={typeof window !== "undefined" ? document.body : undefined}
                 onMenuOpen={() => setPendingMethods(selectedMethodOptions)}
                 onMenuClose={() => {
@@ -238,7 +337,7 @@ export default function OfficialPage({ officialData }) {
           </div>
 
           {/* Lobbying Records Section */}
-          <section className="bg-white dark:bg-gray-800 rounded-md shadow p-4">
+          <section className="surface-card">
             <h2 className="text-2xl font-semibold mb-4">
               Lobbying Records (Page {page} of {totalPages})
             </h2>
@@ -249,19 +348,22 @@ export default function OfficialPage({ officialData }) {
                 ))}
               </div>
             ) : (
-              <p className="text-gray-600 dark:text-gray-400">No records found.</p>
+              <p className="text-muted-ui">No records found.</p>
             )}
 
             {/* Pagination */}
             <div className="flex flex-wrap items-center gap-2 mt-6">
               {page > 1 && (
-                <button onClick={() => handlePageChange(page - 1)} className="px-3 py-1 bg-blue-500 text-white rounded">
+                <button
+                  onClick={() => handlePageChange(page - 1)}
+                  className="px-3 py-1 rounded-md bg-[color:var(--ui-primary)] text-white"
+                >
                   ← Prev
                 </button>
               )}
               {page > 3 && (
                 <>
-                  <button onClick={() => handlePageChange(1)} className="px-3 py-1 bg-blue-500 text-white rounded">
+                  <button onClick={() => handlePageChange(1)} className="px-3 py-1 rounded-md bg-[color:var(--ui-primary)] text-white">
                     1
                   </button>
                   {page > 4 && <span className="px-2">…</span>}
@@ -274,7 +376,9 @@ export default function OfficialPage({ officialData }) {
                   <button
                     key={p}
                     onClick={() => handlePageChange(p)}
-                    className={`px-3 py-1 rounded ${p === page ? "bg-blue-700 font-bold" : "bg-blue-500 text-white"}`}
+                    className={`px-3 py-1 rounded-md ${
+                      p === page ? "bg-blue-800 font-bold text-white" : "bg-[color:var(--ui-primary)] text-white"
+                    }`}
                   >
                     {p}
                   </button>
@@ -285,14 +389,14 @@ export default function OfficialPage({ officialData }) {
                   {page < totalPages - 3 && <span className="px-2">…</span>}
                   <button
                     onClick={() => handlePageChange(totalPages)}
-                    className="px-3 py-1 bg-blue-500 text-white rounded"
+                    className="px-3 py-1 rounded-md bg-[color:var(--ui-primary)] text-white"
                   >
                     {totalPages}
                   </button>
                 </>
               )}
               {page < totalPages && (
-                <button onClick={() => handlePageChange(page + 1)} className="px-3 py-1 bg-blue-500 text-white rounded">
+                <button onClick={() => handlePageChange(page + 1)} className="px-3 py-1 rounded-md bg-[color:var(--ui-primary)] text-white">
                   Next →
                 </button>
               )}
@@ -313,9 +417,9 @@ export default function OfficialPage({ officialData }) {
                   min="1"
                   max={totalPages}
                   defaultValue={page}
-                  className="w-16 border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-16 border border-[var(--ui-border)] rounded-md px-2 py-1 bg-white/80 dark:bg-slate-900/30 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <button type="submit" className="ml-2 px-3 py-1 bg-blue-500 text-white rounded">
+                <button type="submit" className="ml-2 px-3 py-1 rounded-md bg-[color:var(--ui-primary)] text-white">
                   Go
                 </button>
               </form>

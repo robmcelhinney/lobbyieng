@@ -1,14 +1,14 @@
 import sqlite3 from "sqlite3"
 import { open } from "sqlite"
 
-// Slugify function matching your other APIs
+// Slugify function matching pages/api/officials/[slug].js
 function slugify(name) {
   return name
     .normalize("NFD")
-    .replace(/[^\p{L}\p{N}]+/gu, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
+    .replace(/\p{Diacritic}/gu, "")
     .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "-")
 }
 
 export default async function handler(req, res) {

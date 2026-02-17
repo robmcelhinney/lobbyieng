@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import Select from "react-select"
 import Head from "next/head"
+import { getServerBaseUrl } from "../lib/serverBaseUrl"
 
 const topOfficialsTitles = [
   "TD",
@@ -13,10 +14,7 @@ const topOfficialsTitles = [
 ]
 
 export async function getServerSideProps(context) {
-  const baseUrl =
-    process.env.INTERNAL_BASE_URL ||
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    (context.req ? `https://${context.req.headers.host}` : "")
+  const baseUrl = getServerBaseUrl(context.req)
   try {
     const periodsRes = await fetch(`${baseUrl}/api/periods`)
     const periodsJson = periodsRes.ok ? await periodsRes.json() : { periods: [] }
@@ -93,28 +91,28 @@ export default function Index({ officials: initialOfficials, allPeriods, latestP
         />
         <meta name="twitter:image" content="/android-chrome-512x512.png" />
       </Head>
-      <div className="min-h-screen bg-cb-light-background dark:bg-cb-dark-background text-cb-light-text dark:text-cb-dark-text">
+      <div className="min-h-screen">
         {isLoading && (
           <div className="w-full h-1 bg-blue-200 dark:bg-blue-900">
             <div className="h-1 bg-blue-600 dark:bg-blue-400 animate-pulse w-full"></div>
           </div>
         )}
 
-        <header className="bg-blue-900 dark:bg-gray-800 text-white dark:text-gray-100 py-4 shadow">
-          <div className="max-w-6xl mx-auto px-4 text-center">
-            <h1 className="text-4xl font-bold">Elected Officials – Lobbying Data</h1>
-            <p className="mt-2 text-lg">Search for your favourite member of the Dáil.</p>
+        <header className="hero-shell">
+          <div className="max-w-7xl mx-auto px-4 py-8">
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight">Find a TD</h1>
+            <p className="hero-subtitle mt-2">Search elected officials and inspect their recent lobbying activity.</p>
           </div>
         </header>
 
-        <main className="max-w-6xl mx-auto px-4 py-8">
-          <div className="bg-white dark:bg-gray-800 rounded-md shadow-md p-6 mb-6 flex flex-col sm:flex-row gap-6 items-center">
+        <main className="max-w-7xl mx-auto px-4 py-8">
+          <div className="surface-card mb-6 flex flex-col sm:flex-row gap-6 items-end">
             <div className="w-50">
-              <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Period</label>
+              <label className="block mb-1 text-sm font-semibold text-muted-ui">Period</label>
               <select
                 value={selectedPeriod}
                 onChange={(e) => setSelectedPeriod(e.target.value)}
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 shadow-sm bg-white dark:bg-gray-700 text-cb-light-text dark:text-cb-dark-text focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-[var(--ui-border)] rounded-md px-3 py-2 shadow-sm bg-white/80 dark:bg-slate-900/30 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">All Periods</option>
                 {allPeriods.map((period) => (
@@ -126,7 +124,7 @@ export default function Index({ officials: initialOfficials, allPeriods, latestP
             </div>
 
             <div className="w-64 accent-blue-600 dark:accent-blue-400">
-              <label className="block text-sm font-medium text-cb-light-text dark:text-cb-dark-text mb-1">Name</label>
+              <label className="block text-sm font-semibold text-muted-ui mb-1">Name</label>
               <Select
                 options={nameOptions}
                 value={selectedName}
@@ -136,14 +134,14 @@ export default function Index({ officials: initialOfficials, allPeriods, latestP
                 styles={{
                   control: (base) => ({
                     ...base,
-                    backgroundColor: "hsl(var(--cb-light-background))",
-                    borderColor: "#CBD5E0",
-                    color: "#111"
+                    backgroundColor: "rgba(255,255,255,0.85)",
+                    borderColor: "var(--ui-border)",
+                    color: "var(--ui-text)"
                   }),
                   menu: (base) => ({
                     ...base,
-                    backgroundColor: "#fff",
-                    color: "#111",
+                    backgroundColor: "var(--ui-surface)",
+                    color: "var(--ui-text)",
                     zIndex: 9999
                   })
                 }}
@@ -157,7 +155,7 @@ export default function Index({ officials: initialOfficials, allPeriods, latestP
                     setSelectedPeriod("")
                     setSelectedName(null)
                   }}
-                  className="text-red-600 dark:text-red-400 underline text-sm"
+                  className="text-sm font-semibold text-[color:var(--ui-primary)] hover:underline"
                 >
                   Clear Filters
                 </button>
@@ -165,28 +163,26 @@ export default function Index({ officials: initialOfficials, allPeriods, latestP
             )}
           </div>
 
-          <section className="bg-white dark:bg-gray-800 rounded-md shadow p-6">
+          <section className="surface-card">
             <h2 className="text-2xl font-semibold mb-4">Officials ({isLoading ? "..." : deduped.length} results)</h2>
             {isLoading ? (
               <div className="text-center text-blue-600 dark:text-blue-300 py-8">Loading officials...</div>
             ) : deduped.length > 0 ? (
               <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {deduped.map((official) => (
-                  <li
-                    key={official.slug}
-                    className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md p-4 hover:shadow transition"
-                  >
-                    <Link legacyBehavior href={`/officials/${official.slug}`}>
-                      <a>
-                        <h3 className="font-bold text-cb-light-text dark:text-cb-dark-text">{official.name}</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">{official.job_title}</p>
-                      </a>
+                  <li key={official.slug}>
+                    <Link
+                      href={`/officials/${official.slug}`}
+                      className="surface-card card-interactive no-underline block min-h-[120px]"
+                    >
+                      <h3 className="font-bold">{official.name}</h3>
+                      <p className="text-sm text-muted-ui mt-1">{official.job_title}</p>
                     </Link>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-center text-gray-500 dark:text-gray-400">No results found.</p>
+              <p className="text-center text-muted-ui">No results found.</p>
             )}
           </section>
         </main>

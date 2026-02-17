@@ -2,8 +2,10 @@ import Head from "next/head"
 import ChordDiagram from "../components/ChordDiagram"
 import { useEffect, useState } from "react"
 import Select from "react-select"
+import { useRouter } from "next/router"
 
 export default function ChordPage() {
+  const router = useRouter()
   const [officials, setOfficials] = useState([])
   const [selected1, setSelected1] = useState("")
   const [selected2, setSelected2] = useState("")
@@ -14,6 +16,8 @@ export default function ChordPage() {
   const [startYear, setStartYear] = useState(2015)
   const [endYear, setEndYear] = useState(new Date().getFullYear())
   const [availableYears, setAvailableYears] = useState([])
+  const [copyStatus, setCopyStatus] = useState("")
+  const [queryReady, setQueryReady] = useState(false)
 
   // Track color mode and update on class change
   const [colorMode, setColorMode] = useState(() => {
@@ -96,6 +100,17 @@ export default function ChordPage() {
 
   // Fetch all officials for autocomplete and available years
   useEffect(() => {
+    if (!router.isReady) return
+    const { official1, official2, start_year, end_year, max_lobbyists } = router.query
+    if (typeof official1 === "string") setSelected1(official1)
+    if (typeof official2 === "string") setSelected2(official2)
+    if (typeof start_year === "string" && /^\d+$/.test(start_year)) setStartYear(Number(start_year))
+    if (typeof end_year === "string" && /^\d+$/.test(end_year)) setEndYear(Number(end_year))
+    if (typeof max_lobbyists === "string" && /^\d+$/.test(max_lobbyists)) setMaxLobbyists(Number(max_lobbyists))
+    setQueryReady(true)
+  }, [router.isReady, router.query])
+
+  useEffect(() => {
     fetch("/api/officials/names")
       .then((res) => res.json())
       .then((data) => setOfficials(data.map((o) => o.person_name)))
@@ -104,9 +119,18 @@ export default function ChordPage() {
     const minYear = 2015
     const maxYear = new Date().getFullYear()
     setAvailableYears(Array.from({ length: maxYear - minYear + 1 }, (_, i) => minYear + i))
-    setStartYear(minYear)
-    setEndYear(maxYear)
   }, [])
+
+  useEffect(() => {
+    if (!queryReady) return
+    const nextQuery = {}
+    if (selected1) nextQuery.official1 = selected1
+    if (selected2) nextQuery.official2 = selected2
+    if (startYear) nextQuery.start_year = String(startYear)
+    if (endYear) nextQuery.end_year = String(endYear)
+    if (maxLobbyists !== 10) nextQuery.max_lobbyists = String(maxLobbyists)
+    router.replace({ pathname: "/chord", query: nextQuery }, undefined, { shallow: true })
+  }, [selected1, selected2, startYear, endYear, maxLobbyists, queryReady, router])
 
   // Fetch chord data when both officials or time range changes
   useEffect(() => {
@@ -132,6 +156,17 @@ export default function ChordPage() {
       })
   }, [selected1, selected2, startYear, endYear])
 
+  const copyPermalink = async () => {
+    if (typeof window === "undefined") return
+    try {
+      await navigator.clipboard.writeText(window.location.href)
+      setCopyStatus("Link copied")
+    } catch {
+      setCopyStatus("Copy failed")
+    }
+    setTimeout(() => setCopyStatus(""), 1600)
+  }
+
   return (
     <>
       <Head>
@@ -142,6 +177,14 @@ export default function ChordPage() {
           <div className="max-w-6xl mx-auto px-4 text-center">
             <h1 className="text-3xl font-bold">Compare Two Officials</h1>
             <p className="mt-1">Select two officials to compare their lobbying connections.</p>
+            <button
+              type="button"
+              onClick={copyPermalink}
+              className="inline-block mt-3 px-4 py-2 rounded-md border border-white/60 text-white hover:bg-white/10 transition font-semibold text-sm"
+            >
+              Copy link to this view
+            </button>
+            {copyStatus ? <p className="text-xs mt-2 text-blue-100">{copyStatus}</p> : null}
           </div>
         </header>
         <main className="max-w-6xl mx-auto px-4 py-8">

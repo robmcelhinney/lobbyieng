@@ -41,6 +41,14 @@ cd lobbyieng
 npm install     # or yarn
 ```
 
+### Python Environment (uv)
+
+This repo uses `uv` for Python dependency management.
+
+```bash
+uv sync
+```
+
 ### 📦 Build the Database (`lobbying.db`)
 
 1. Select relevant data from https://www.lobbying.ie/app/home/search by using CSV export
@@ -48,7 +56,7 @@ npm install     # or yarn
 1. Run the parser to ingest CSVs into SQLite:
 
    ```bash
-   python parser.py
+   npm run build:db
    ```
 
    - This script (`parser.py`) drops and recreates tables, normalises names, and populates:
@@ -57,6 +65,12 @@ npm install     # or yarn
      - `lobbying_activity_entries`
 
 1. After ingesting, indexes are created automatically for faster queries.
+
+Alternatively:
+
+```bash
+make build-db
+```
 
 ### 🖼️ Fetch Dáil Thumbnails (optional)
 
@@ -73,6 +87,38 @@ npm run dev
 # Visit http://localhost:3000
 ```
 
+## 🚢 Production Deployment Notes
+
+### Option 1: Docker Compose
+
+```bash
+docker compose build
+docker compose up -d
+```
+
+This uses:
+- `Dockerfile` for the Next.js app image
+- `docker-compose.yml` for service orchestration
+- `nginx.conf` for reverse-proxy behavior
+
+### Option 2: Docker + Nginx
+
+Build and run the app container:
+
+```bash
+docker build -t lobbyieng .
+docker run -d --name lobbyieng -p 3000:3000 lobbyieng
+```
+
+Then point your host Nginx virtual host (or containerized Nginx) at `http://127.0.0.1:3000`, using `nginx.conf` as a baseline.
+
+### Recommended production order
+
+1. Build/refresh `lobbying.db` with `npm run build:db`.
+2. Build the app image (`docker build` or `docker compose build`).
+3. Start app services.
+4. Put Nginx in front for TLS termination and caching headers.
+
 ## 🛠️ API Endpoints
 
 - **GET** `/api/officials?period=All&job_titles=TD,Minister` — list officials
@@ -83,6 +129,7 @@ npm run dev
 - **GET** `/api/chord-data?officials=slug1,slug2&start_year&end_year` — chord JSON
 - **GET** `/api/periods` — all periods
 - **GET** `/api/periods-latest` — latest period
+- **GET** `/api/data-metadata` — dataset coverage, freshness, and summary counts
 
 ## 📖 Pages
 
@@ -95,6 +142,19 @@ npm run dev
 - **/chord** Compare two officials
 - **/connections/[slug]** Force graph
 - **/methods/[slug]** Pie chart
+- **/data-limitations** Data coverage, update cadence, and limitations
+
+## Data Source & Limitations
+
+- Source: CSV exports from the official [Register of Lobbying](https://www.lobbying.ie/).
+- Coverage and freshness are surfaced in-app at `/data-limitations`, including:
+  - period range and first/latest published return dates
+  - latest local database refresh timestamp
+- Reporting cadence: Ireland's register uses four-month reporting cycles.
+- Known caveats include:
+  - name normalization and variant matching can be imperfect
+  - source exports may include duplicates/amendments that need interpretation
+  - occasional missing or inconsistent DPO/official details in source data
 
 ## 🙏 Acknowledgements
 

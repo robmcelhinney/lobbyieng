@@ -2,26 +2,38 @@ import Link from "next/link"
 import Image from "next/image"
 import { useTheme } from "./ThemeContext"
 import { useState } from "react"
+import { useRouter } from "next/router"
 
 export default function Header() {
   const { theme, toggleTheme } = useTheme()
   const [menuOpen, setMenuOpen] = useState(false)
+  const router = useRouter()
+  const currentPath = (router.asPath || "").split("?")[0]
+
+  const navItems = [
+    { href: "/dail", label: "Find a TD" },
+    { href: "/officials", label: "All Officials" },
+    { href: "/lobbyists", label: "Find a Lobbyist" },
+    { href: "/explore", label: "Explore" },
+    { href: "/data-limitations", label: "Data & Limitations" }
+  ]
+
+  const isActive = (href) => currentPath === href || currentPath.startsWith(`${href}/`)
+
   return (
-    <header className="bg-blue-900 py-2 shadow">
-      <div className="max-w-6xl mx-auto px-2 sm:px-4 flex items-center justify-between">
-        <Link href="/" legacyBehavior>
-          <a className="flex-shrink-0 flex items-center" style={{ minWidth: 0 }}>
-            <div className="relative" style={{ width: 120, height: 80 }}>
-              <Image
-                src="/images/logo.png"
-                alt="Logo"
-                layout="fill"
-                objectFit="contain"
-                sizes="(max-width: 640px) 96px, 80px"
-                priority
-              />
-            </div>
-          </a>
+    <header className="sticky top-0 z-30 hero-shell border-b border-white/15 shadow">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-1.5 flex items-center justify-between">
+        <Link href="/" className="flex-shrink-0 flex items-center" style={{ minWidth: 0 }}>
+          <div className="relative" style={{ width: 104, height: 52 }}>
+            <Image
+              src="/images/logo.png"
+              alt="Logo"
+              layout="fill"
+              objectFit="contain"
+              sizes="(max-width: 640px) 96px, 104px"
+              priority
+            />
+          </div>
         </Link>
         {/* Hamburger for mobile */}
         <button
@@ -37,22 +49,18 @@ export default function Header() {
         <nav
           className={`${
             menuOpen ? "flex" : "hidden"
-          } sm:flex flex-col sm:flex-row gap-4 sm:gap-6 items-center absolute sm:static top-16 left-0 w-full sm:w-auto bg-blue-900 sm:bg-transparent z-20 px-4 sm:px-0 py-4 sm:py-0 transition-all`}
+          } sm:flex flex-col sm:flex-row gap-2 sm:gap-3 items-center absolute sm:static top-14 left-0 w-full sm:w-auto hero-shell sm:bg-transparent z-20 px-4 sm:px-0 py-4 sm:py-0 transition-all`}
         >
-          <Link href="/dail" legacyBehavior>
-            <a className="text-white text-base sm:text-lg font-semibold hover:underline py-1">Find a TD</a>
-          </Link>
-          <Link href="/officials" legacyBehavior>
-            <a className="text-white text-base sm:text-lg font-semibold hover:underline py-1">All Officials</a>
-          </Link>
-          <Link href="/lobbyists" legacyBehavior>
-            <a className="text-white text-base sm:text-lg font-semibold hover:underline py-1">Find a Lobbyist</a>
-          </Link>
+          {navItems.map((item) => (
+            <Link key={item.href} href={item.href} className={`nav-pill ${isActive(item.href) ? "nav-pill-active" : ""}`}>
+              {item.label}
+            </Link>
+          ))}
           <a
             href="https://github.com/robmcelhinney/lobbyieng/"
             target="_blank"
             rel="noopener noreferrer"
-            className="ml-0 sm:ml-2 text-white hover:text-gray-300 py-1"
+            className="ml-0 sm:ml-1 text-white hover:text-blue-100 py-1"
             aria-label="GitHub Repository"
           >
             <svg height="24" width="24" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
@@ -61,7 +69,7 @@ export default function Header() {
           </a>
           <button
             onClick={toggleTheme}
-            className="ml-0 sm:ml-4 px-3 py-1 rounded bg-gray-200 dark:bg-gray-800 text-cb-light-text dark:text-cb-dark-text dark:text-gray-100 border border-gray-400 dark:border-gray-700 transition mt-2 sm:mt-0"
+            className="ml-0 sm:ml-2 px-3 py-1 rounded bg-white/90 hover:bg-white text-slate-900 border border-white/60 transition mt-2 sm:mt-0 text-sm font-semibold"
             aria-label="Toggle dark mode"
           >
             {theme === "dark" ? "🌙 Dark" : "☀️ Light"}

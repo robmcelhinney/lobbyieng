@@ -43,75 +43,74 @@ export default function LobbyingCardLobbyist({ record }) {
   const isFormerDPO = record.isFormerDPO
 
   return (
-    <div className="border border-gray-300 dark:border-gray-600 rounded-lg p-4 mb-4 shadow-sm bg-white dark:bg-gray-700 text-cb-light-text dark:text-cb-dark-text">
-      <div className="flex items-center justify-between mb-2">
-        <div className="text-sm text-gray-600 dark:text-gray-400">{date}</div>
+    <article className="surface-card">
+      <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
+        <div className="text-xs md:text-sm text-muted-ui">{date}</div>
 
         {isFormerDPO && (
-          <>
-            <span className="inline-flex items-center px-2 py-1 text-xs font-semibold text-red-800 bg-red-100 rounded-full dark:bg-red-900 dark:text-red-200">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/45 dark:text-red-200">
               Current/Former DPO
             </span>
             <a
               href="https://www.lobbying.ie/help-resources/frequently-asked-questions/"
               target="_blank"
               rel="noopener noreferrer"
-              className="ml-2 text-blue-500 hover:underline text-xs"
+              className="text-xs font-semibold hover:underline"
             >
-              What is lobbying? (FAQ)
+              FAQ
             </a>
-          </>
+          </div>
+        )}
+      </div>
+      <div className="mb-2 text-sm leading-6">
+        <span className="font-semibold">Politician(s) lobbied:</span> {politicians}
+      </div>
+      <div className="mb-2 text-sm leading-6">
+        <span className="font-semibold">Intent:</span> {intent}
+      </div>
+      <div className="mb-2 text-sm leading-6">
+        <span className="font-semibold">Methods:</span>{" "}
+        {uniqueMethods.length > 0 ? (
+          <span className="inline-flex flex-wrap gap-2 align-middle">
+            {uniqueMethods.map((method) => (
+              <span
+                key={method}
+                className="text-xs md:text-sm px-2.5 py-1 rounded-full bg-[color:var(--ui-bg-soft)] text-[color:var(--ui-text)]"
+              >
+                {method}
+              </span>
+            ))}
+          </span>
+        ) : (
+          <span className="text-muted-ui">Unknown</span>
         )}
       </div>
       <div className="mb-2">
-        <span className="font-semibold">Politician(s) lobbied: </span>
-        {politicians}
+        <div className="text-sm font-semibold mb-2">Details by Method</div>
+        <div className="space-y-2">
+          {parsed.length > 0 ? (
+            parsed.map((item, idx) => (
+              <div
+                key={idx}
+                className="rounded-md border border-[var(--ui-border)] bg-white/80 dark:bg-slate-900/35 px-3 py-2"
+              >
+                <div className="text-xs uppercase tracking-wide text-muted-ui mb-1">
+                  {item.method || "Method not specified"}
+                </div>
+                <div className="text-sm leading-6">{item.description || "No description"}</div>
+              </div>
+            ))
+          ) : (
+            <div className="text-sm text-muted-ui">Unknown</div>
+          )}
+        </div>
       </div>
-      <div className="mb-2">
-        <span className="font-semibold">Intent: </span>
-        {intent}
-      </div>
-      <div className="mb-2">
-        <span className="font-semibold">Methods: </span>
-        {uniqueMethods.length > 0 ? uniqueMethods.join(", ") : <span className="text-gray-400">Unknown</span>}
-      </div>
-      <div className="mb-2">
-        <span className="font-semibold">Details & Methods:</span>
-        <table className="min-w-full text-sm mt-2 border-separate border-spacing-y-1">
-          <thead>
-            <tr>
-              <th className="text-left pr-4 text-cb-light-text dark:text-cb-dark-text">Method</th>
-              <th className="text-left text-cb-light-text dark:text-cb-dark-text">Description</th>
-            </tr>
-          </thead>
-          <tbody>
-            {parsed.length > 0 ? (
-              parsed.map((item, idx) => (
-                <tr key={idx}>
-                  <td className="pr-4 font-medium text-blue-900 dark:text-blue-300">
-                    {item.method || <span className="text-gray-400 dark:text-gray-500">—</span>}
-                  </td>
-                  <td className="text-cb-light-text dark:text-cb-dark-text">{item.description}</td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={2}>Unknown</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-      <div className="mt-2">
-        <a
-          href={`https://${record.url}`}
-          className="text-blue-600 hover:underline"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          View Full Record
+      <div className="mt-4 pt-3 border-t border-[var(--ui-border)]">
+        <a href={`https://${record.url}`} className="font-semibold hover:underline" target="_blank" rel="noopener noreferrer">
+          View full record
         </a>
       </div>
-    </div>
+    </article>
   )
 }

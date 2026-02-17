@@ -2,24 +2,116 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Colorblind-safe background/text for body */
+@layer base {
+  :root {
+    --ui-bg: #f3f5fa;
+    --ui-bg-soft: #e8edf7;
+    --ui-surface: #ffffff;
+    --ui-text: #14213d;
+    --ui-muted: #4b5b7a;
+    --ui-primary: #1f4eb3;
+    --ui-accent: #008a6b;
+    --ui-border: #d6deef;
+  }
+
+  .dark {
+    --ui-bg: #161b2a;
+    --ui-bg-soft: #1f2638;
+    --ui-surface: #20283a;
+    --ui-text: #edf2ff;
+    --ui-muted: #b9c3e5;
+    --ui-primary: #7db3ff;
+    --ui-accent: #48d0a9;
+    --ui-border: #33405e;
+  }
+}
+
 body {
   @apply bg-cb-light-background text-cb-light-text transition-colors duration-300;
+  background: radial-gradient(circle at top right, var(--ui-bg-soft) 0%, var(--ui-bg) 38%, var(--ui-bg) 100%);
+  color: var(--ui-text);
 }
 .dark body {
   @apply bg-cb-dark-background text-cb-dark-text;
+  color: var(--ui-text);
 }
 
-/* Example: override link color for accessibility */
 a {
-  @apply text-cb-light-primary dark:text-cb-dark-primary underline;
+  color: var(--ui-primary);
 }
 
-/* Example: override button color for accessibility */
 button {
   @apply focus:outline-none focus:ring-2 focus:ring-cb-light-accent dark:focus:ring-cb-dark-accent;
 }
 
 .card {
-  @apply bg-cb-light-background dark:bg-cb-dark-background rounded shadow p-4;
+  @apply rounded-lg p-4;
+  background-color: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  box-shadow: 0 8px 18px rgba(12, 24, 63, 0.06);
+}
+
+.surface-card {
+  @apply rounded-xl p-5;
+  background-color: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  box-shadow: 0 10px 24px rgba(13, 28, 78, 0.08);
+}
+
+.card-interactive {
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.card-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(13, 28, 78, 0.14);
+  border-color: rgba(31, 78, 179, 0.36);
+}
+
+.hero-shell {
+  background: linear-gradient(135deg, rgba(31, 78, 179, 0.96), rgba(17, 41, 96, 0.95));
+  color: #f5f8ff;
+}
+
+.hero-title {
+  @apply text-4xl md:text-5xl font-bold tracking-tight;
+}
+
+.hero-subtitle {
+  @apply text-base md:text-lg;
+  color: rgba(236, 243, 255, 0.92);
+}
+
+.kpi-chip {
+  @apply rounded-lg px-3 py-2 text-sm font-medium;
+  background-color: rgba(245, 249, 255, 0.9);
+  color: #152547;
+}
+
+.dark .kpi-chip {
+  background-color: rgba(27, 36, 58, 0.92);
+  color: #eaf0ff;
+}
+
+.section-title {
+  @apply text-2xl md:text-3xl font-semibold tracking-tight;
+}
+
+.text-muted-ui {
+  color: var(--ui-muted);
+}
+
+.nav-pill {
+  @apply px-3 py-1.5 rounded-md text-sm font-semibold;
+  color: #ebf1ff;
+  transition: background-color 0.16s ease, color 0.16s ease;
+}
+
+.nav-pill:hover {
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+.nav-pill-active {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
 }

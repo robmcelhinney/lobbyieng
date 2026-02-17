@@ -1,11 +1,63 @@
-import React, { useRef, useState, useEffect } from "react"
+import React, { useRef, useState, useEffect, useCallback } from "react"
 import dynamic from "next/dynamic"
 import Head from "next/head"
 import { useRouter } from "next/router"
+import Link from "next/link"
 
 const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
   ssr: false
 })
+
+function buildGraphDataFromRecords(officialSlug, centralName, records) {
+  const centralId = centralName.trim().toLowerCase()
+  const centralImg = `/images/td_thumbnails/${officialSlug}.jpg`
+
+  const lobbyistCounts = {}
+  for (const record of records || []) {
+    if (record.lobbyist_name) {
+      lobbyistCounts[record.lobbyist_name] = (lobbyistCounts[record.lobbyist_name] || 0) + 1
+    }
+  }
+
+  const lobbyists = Object.keys(lobbyistCounts).sort((a, b) => a.localeCompare(b))
+  const count = lobbyists.length
+  const radius = Math.max(120, Math.min(260, 90 + count * 4))
+
+  const nodes = [
+    {
+      id: centralId,
+      label: centralName,
+      group: 1,
+      img: centralImg,
+      fx: 0,
+      fy: 0,
+      x: 0,
+      y: 0
+    }
+  ]
+
+  const links = []
+  lobbyists.forEach((lobbyist, idx) => {
+    const normId = lobbyist.trim().toLowerCase()
+    const theta = (2 * Math.PI * idx) / Math.max(1, count)
+    nodes.push({
+      id: normId,
+      label: lobbyist,
+      group: 2,
+      x: radius * Math.cos(theta),
+      y: radius * Math.sin(theta),
+      fx: radius * Math.cos(theta),
+      fy: radius * Math.sin(theta)
+    })
+    links.push({
+      source: centralId,
+      target: normId,
+      count: lobbyistCounts[lobbyist]
+    })
+  })
+
+  return { nodes, links }
+}
 
 export default function ConnectionsOfficial() {
   const router = useRouter()
@@ -21,6 +73,10 @@ export default function ConnectionsOfficial() {
   const [selectedYear, setSelectedYear] = useState("All")
   const [methods, setMethods] = useState([])
   const [selectedMethod, setSelectedMethod] = useState("All")
+  const [filtersReady, setFiltersReady] = useState(false)
+  const lastAutoFocusKeyRef = useRef("")
+  const graphWrapRef = useRef(null)
+  const [graphSize, setGraphSize] = useState({ width: 0, height: 0 })
 
   // Wrap LEGEND_CATEGORIES in useMemo to avoid recreating on every render
   const LEGEND_CATEGORIES = React.useMemo(
@@ -81,187 +137,43 @@ export default function ConnectionsOfficial() {
   }
 
   useEffect(() => {
-    async function fetchLatestYearAndMethodAndData() {
-      try {
-        const res = await fetch(`${baseUrl}/api/periods-latest`)
-        let latestYear = null
-        if (res.ok) {
-          const data = await res.json()
-          const match = data.period && data.period.match(/\d{4}/g)
-          if (match && match.length > 0) {
-            latestYear = match[match.length - 1]
-            setSelectedYear(latestYear)
-          }
-        }
-        let latestMethod = null
-        if (latestYear) {
-          const res2 = await fetch(
-            `${baseUrl}/api/officials/${officialSlug}?per_page=All&year=${encodeURIComponent(latestYear)}`
-          )
-          if (!res2.ok) throw new Error("Official not found or failed to fetch data")
-          const data2 = await res2.json()
-          if (data2.methods && data2.methods.length > 0) {
-            if (data2.methods.includes("Meeting")) {
-              latestMethod = "Meeting"
-            } else if (data2.methods.length > 0) {
-              latestMethod = "All"
-            } else {
-              latestMethod = null
-            }
-            setSelectedMethod(latestMethod)
-            setMethods(data2.methods)
-          }
-          const centralName = data2.name || officialSlug.replace(/-/g, " ")
-          const centralId = centralName.trim().toLowerCase()
-          // Use td_thumbnails image if available, else fallback handled in nodeCanvasObject
-          const centralImg = `/images/td_thumbnails/${officialSlug}.jpg`
-          const nodes = [
-            {
-              id: centralId,
-              label: centralName,
-              group: 1,
-              img: centralImg,
-              fx: 0,
-              fy: 0
-            }
-          ]
-          const lobbyistCounts = {}
-          for (const record of data2.records || []) {
-            if (record.lobbyist_name) {
-              lobbyistCounts[record.lobbyist_name] = (lobbyistCounts[record.lobbyist_name] || 0) + 1
-            }
-          }
-          let links = []
-          for (const lobbyist in lobbyistCounts) {
-            const normId = lobbyist.trim().toLowerCase()
-            nodes.push({
-              id: normId,
-              label: lobbyist,
-              group: 2
-            })
-            links.push({
-              source: centralId,
-              target: normId,
-              count: lobbyistCounts[lobbyist]
-            })
-          }
-          links = links.map((l) => ({
-            ...l,
-            source:
-              typeof l.source === "object" && l.source && "id" in l.source
-                ? String(l.source.id).trim().toLowerCase()
-                : String(l.source).trim().toLowerCase(),
-            target:
-              typeof l.target === "object" && l.target && "id" in l.target
-                ? String(l.target.id).trim().toLowerCase()
-                : String(l.target).trim().toLowerCase()
-          }))
-          setGraphData({ nodes, links })
-          setLoading(false)
-        }
-        if (latestYear && latestMethod) {
-          setLoading(true)
-          setError(null)
-          const res3 = await fetch(
-            `${baseUrl}/api/officials/${officialSlug}?per_page=All&year=${encodeURIComponent(
-              latestYear
-            )}&method=${encodeURIComponent(latestMethod)}`
-          )
-          if (!res3.ok) throw new Error("Official not found or failed to fetch data")
-          const data3 = await res3.json()
-          const centralName = data3.name || officialSlug.replace(/-/g, " ")
-          const centralId = centralName.trim().toLowerCase()
-          const nodes = [
-            {
-              id: centralId,
-              label: centralName,
-              group: 1,
-              img: `/images/td_thumbnails/${officialSlug}.jpg`,
-              fx: 0,
-              fy: 0
-            }
-          ]
-          const lobbyistCounts = {}
-          for (const record of data3.records || []) {
-            if (record.lobbyist_name) {
-              lobbyistCounts[record.lobbyist_name] = (lobbyistCounts[record.lobbyist_name] || 0) + 1
-            }
-          }
-          let links = []
-          for (const lobbyist in lobbyistCounts) {
-            const normId = lobbyist.trim().toLowerCase()
-            nodes.push({ id: normId, label: lobbyist, group: 2 })
-            links.push({
-              source: centralId,
-              target: normId,
-              count: lobbyistCounts[lobbyist]
-            })
-          }
-          links = links.map((l) => ({
-            ...l,
-            source:
-              typeof l.source === "object" && l.source && "id" in l.source
-                ? String(l.source.id).trim().toLowerCase()
-                : String(l.source).trim().toLowerCase(),
-            target:
-              typeof l.target === "object" && l.target && "id" in l.target
-                ? String(l.target.id).trim().toLowerCase()
-                : String(l.target).trim().toLowerCase()
-          }))
-          setGraphData({ nodes, links })
-          setLoading(false)
-        }
-      } catch (err) {
-        setError(err.message)
-        setLoading(false)
-      }
-    }
-    if (officialSlug) fetchLatestYearAndMethodAndData()
-  }, [officialSlug])
-
-  useEffect(() => {
     async function fetchFilters() {
       try {
-        const res = await fetch(`${baseUrl}/api/officials/${officialSlug}?per_page=All`)
-        if (!res.ok) throw new Error("Official not found or failed to fetch filters")
-        const data = await res.json()
-        setYears(data.years || [])
-        setMethods(data.methods || [])
+        setFiltersReady(false)
+        const [filtersRes, latestRes] = await Promise.all([
+          fetch(`${baseUrl}/api/officials/${officialSlug}?per_page=All`),
+          fetch(`${baseUrl}/api/periods-latest`)
+        ])
+        if (!filtersRes.ok) throw new Error("Official not found or failed to fetch filters")
+
+        const data = await filtersRes.json()
+        const nextYears = data.years || []
+        const nextMethods = data.methods || []
+        setYears(nextYears)
+        setMethods(nextMethods)
+
+        let latestYear = "All"
+        if (latestRes.ok) {
+          const latest = await latestRes.json()
+          const match = latest.period && latest.period.match(/\d{4}/g)
+          const fromPeriod = match && match.length ? match[match.length - 1] : null
+          if (fromPeriod && nextYears.includes(fromPeriod)) latestYear = fromPeriod
+        }
+        setSelectedYear(latestYear)
+        setSelectedMethod(nextMethods.includes("Meeting") ? "Meeting" : "All")
+        setFiltersReady(true)
       } catch (err) {
         setError(err.message)
         setYears([])
         setMethods([])
+        setFiltersReady(true)
       }
     }
     if (officialSlug) fetchFilters()
-  }, [officialSlug])
+  }, [officialSlug, baseUrl])
 
   useEffect(() => {
-    if (years.length > 0) {
-      const currentYear = new Date().getFullYear().toString()
-      setSelectedYear(years.includes(currentYear) ? currentYear : "All")
-    }
-    if (methods.length > 0) {
-      if (methods.includes("Meeting")) {
-        setSelectedMethod("Meeting")
-      } else {
-        setSelectedMethod("All")
-      }
-    }
-  }, [years, methods])
-
-  useEffect(() => {
-    if (methods.length > 0) {
-      if (methods.includes("Meeting")) {
-        setSelectedMethod("Meeting")
-      } else {
-        setSelectedMethod("All")
-      }
-    }
-  }, [methods])
-
-  useEffect(() => {
-    if (!selectedYear || !officialSlug) return
+    if (!filtersReady || !selectedYear || !officialSlug) return
     async function fetchConnections() {
       setLoading(true)
       setError(null)
@@ -273,45 +185,7 @@ export default function ConnectionsOfficial() {
         if (!res.ok) throw new Error("Official not found or failed to fetch data")
         const data = await res.json()
         const centralName = data.name || officialSlug.replace(/-/g, " ")
-        const centralId = centralName.trim().toLowerCase()
-        const nodes = [
-          {
-            id: centralId,
-            label: centralName,
-            group: 1,
-            img: `/images/td_thumbnails/${officialSlug}.jpg`,
-            fx: 0,
-            fy: 0
-          }
-        ]
-        const lobbyistCounts = {}
-        for (const record of data.records || []) {
-          if (record.lobbyist_name) {
-            lobbyistCounts[record.lobbyist_name] = (lobbyistCounts[record.lobbyist_name] || 0) + 1
-          }
-        }
-        let links = []
-        for (const lobbyist in lobbyistCounts) {
-          const normId = lobbyist.trim().toLowerCase()
-          nodes.push({ id: normId, label: lobbyist, group: 2 })
-          links.push({
-            source: centralId,
-            target: normId,
-            count: lobbyistCounts[lobbyist]
-          })
-        }
-        links = links.map((l) => ({
-          ...l,
-          source:
-            typeof l.source === "object" && l.source && "id" in l.source
-              ? String(l.source.id).trim().toLowerCase()
-              : String(l.source).trim().toLowerCase(),
-          target:
-            typeof l.target === "object" && l.target && "id" in l.target
-              ? String(l.target.id).trim().toLowerCase()
-              : String(l.target).trim().toLowerCase()
-        }))
-        setGraphData({ nodes, links })
+        setGraphData(buildGraphDataFromRecords(officialSlug, centralName, data.records || []))
       } catch (err) {
         setError(err.message)
       } finally {
@@ -319,7 +193,7 @@ export default function ConnectionsOfficial() {
       }
     }
     fetchConnections()
-  }, [selectedYear, selectedMethod, officialSlug])
+  }, [selectedYear, selectedMethod, officialSlug, baseUrl, filtersReady])
 
   const getLinkColor = (link) => {
     if (link.count >= 4) return "#d7263d"
@@ -356,7 +230,7 @@ export default function ConnectionsOfficial() {
     }
     const isDarkMode = document.documentElement.classList.contains("dark")
     if (node.img) {
-      const size = 20
+      const size = 50
       let img = imageCache.current[node.img]
       if (!img) {
         img = new window.Image()
@@ -380,9 +254,9 @@ export default function ConnectionsOfficial() {
       ctx.textAlign = "center"
       ctx.textBaseline = "top"
       ctx.fillStyle = isDarkMode ? "#eee" : "#222"
-      ctx.fillText(node.label || node.id, node.x, node.y + 12)
+      // ctx.fillText(node.label || node.id, node.x, node.y + 12)
     } else {
-      const size = 2
+      const size = 6
       ctx.beginPath()
       ctx.arc(node.x, node.y, size, 0, 2 * Math.PI, false)
       ctx.fillStyle = nodeColor
@@ -398,6 +272,63 @@ export default function ConnectionsOfficial() {
     ctx.restore()
   }
 
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const measure = () => {
+      const el = graphWrapRef.current
+      if (!el) return
+      const width = Math.max(0, Math.floor(el.clientWidth))
+      const height = Math.max(0, Math.floor(el.clientHeight))
+      setGraphSize((prev) => (prev.width === width && prev.height === height ? prev : { width, height }))
+    }
+
+    measure()
+    window.addEventListener("resize", measure)
+    const observer = new ResizeObserver(() => measure())
+    if (graphWrapRef.current) observer.observe(graphWrapRef.current)
+
+    return () => {
+      window.removeEventListener("resize", measure)
+      observer.disconnect()
+    }
+  }, [])
+
+  const fitGraphView = useCallback(() => {
+    const fg = fgRef.current
+    if (
+      !fg ||
+      typeof fg.centerAt !== "function" ||
+      typeof fg.zoom !== "function" ||
+      typeof fg.zoomToFit !== "function"
+    ) {
+      return
+    }
+
+    const nodes = filteredGraphData?.nodes || []
+    const centerNode = nodes.find((n) => n.group === 1) || nodes[0]
+    const centerX = typeof centerNode?.x === "number" ? centerNode.x : 0
+    const centerY = typeof centerNode?.y === "number" ? centerNode.y : 0
+    const targetZoom = 2.1
+
+    fg.centerAt(centerX, centerY, 260)
+    fg.zoom(targetZoom, 260)
+  }, [filteredGraphData])
+
+  useEffect(() => {
+    if (loading) return
+    const nodeCount = filteredGraphData?.nodes?.length || 0
+    const linkCount = filteredGraphData?.links?.length || 0
+    if (nodeCount === 0) return
+
+    const focusKey = `${officialSlug}|${selectedYear}|${selectedMethod}|${nodeCount}|${linkCount}`
+    if (lastAutoFocusKeyRef.current === focusKey) return
+    lastAutoFocusKeyRef.current = focusKey
+    const t1 = window.setTimeout(() => {
+      fitGraphView()
+    }, 120)
+    return () => window.clearTimeout(t1)
+  }, [loading, filteredGraphData, officialSlug, selectedYear, selectedMethod, visibleNodeIds, fitGraphView])
+
   return (
     <>
       <Head>
@@ -408,6 +339,14 @@ export default function ConnectionsOfficial() {
           <div className="max-w-6xl mx-auto px-4 text-center">
             <h1 className="text-3xl font-bold">Connections Visualization</h1>
             <p className="mt-1">Lobbyists connecting to {officialSlug.replace(/-/g, " ")}</p>
+            {officialSlug && (
+              <Link
+                href={`/officials/${officialSlug}`}
+                className="inline-block mt-3 px-4 py-2 rounded-md bg-white/90 text-slate-900 hover:bg-white transition no-underline font-semibold text-sm"
+              >
+                Back to Official Profile
+              </Link>
+            )}
           </div>
         </header>
         <main className="max-w-6xl mx-auto px-4 py-8 flex flex-col gap-8">
@@ -522,6 +461,7 @@ export default function ConnectionsOfficial() {
               <div className="flex items-center justify-center h-full text-red-600 dark:text-red-400">{error}</div>
             ) : (
               <div
+                ref={graphWrapRef}
                 style={{
                   width: "100%",
                   height: "100%",
@@ -536,8 +476,10 @@ export default function ConnectionsOfficial() {
                   graphData={filteredGraphData}
                   nodeLabel="id"
                   nodeAutoColorBy="group"
-                  width={undefined}
-                  height={undefined}
+                  minZoom={0.8}
+                  maxZoom={8}
+                  width={graphSize.width || 800}
+                  height={graphSize.height || 600}
                   linkColor={getLinkColor}
                   nodeCanvasObject={nodeCanvasObject}
                   onNodeClick={(node) => {

@@ -43,7 +43,7 @@ def download_thumbnails(page_size: int = 100):
                 continue
 
             # build thumbnail URL
-            thumb_url = f"{m['uri']}/image/thumb"
+            thumb_url = f"{m['uri']}/image/large"
             # derive name for filename
             full_name = m.get("fullName") or f"{m.get('firstName','')} {m.get('lastName','')}"
             filename = slugify(full_name)

@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from "react"
 import Head from "next/head"
 import { useRouter } from "next/router"
+import Link from "next/link"
 import { Chart, ArcElement, Tooltip, Legend } from "chart.js"
 import { Pie } from "react-chartjs-2"
 
@@ -59,6 +60,14 @@ export default function MethodsPieChartOfficial() {
               {name ? `Lobbying Methods for ${name}` : "Lobbying Methods Breakdown"}
             </h1>
             <p className="mt-1">Proportion of Meetings, Emails, Calls, and other methods</p>
+            {slug && (
+              <Link
+                href={`/officials/${slug}`}
+                className="inline-block mt-3 px-4 py-2 rounded-md bg-white/90 text-slate-900 hover:bg-white transition no-underline font-semibold text-sm"
+              >
+                Back to Official Profile
+              </Link>
+            )}
           </div>
         </header>
         <main className="max-w-3xl mx-auto px-4 py-8 flex flex-col gap-8">
