@@ -1,5 +1,6 @@
 import sqlite3 from "sqlite3"
 import { open } from "sqlite"
+import { buildCacheKey, readCache, writeCache } from "../../../lib/serverCache"
 
 const STOPWORDS = new Set([
   "the",
@@ -108,6 +109,16 @@ function biggestMovers(currentRows, previousRows, key) {
 
 export default async function handler(req, res) {
   try {
+    const searchTerm = String(req.query.q || "").trim()
+    const cacheKey = buildCacheKey("explore-insights", { q: searchTerm })
+    const cached = readCache(cacheKey)
+    if (cached) {
+      res.setHeader("X-Data-Cache", "HIT")
+      res.setHeader("Cache-Control", "public, max-age=3600, stale-while-revalidate=120")
+      res.status(200).json(cached)
+      return
+    }
+
     const db = await open({
       filename: "./lobbying.db",
       driver: sqlite3.Database
@@ -352,7 +363,6 @@ export default async function handler(req, res) {
         )
       : []
 
-    const searchTerm = String(req.query.q || "").trim()
     const searchResults =
       searchTerm.length >= 2
         ? await db.all(
@@ -383,8 +393,7 @@ export default async function handler(req, res) {
           )
         : []
 
-    res.setHeader("Cache-Control", "public, max-age=3600, stale-while-revalidate=120")
-    res.status(200).json({
+    const payload = {
       generated_at: new Date().toISOString(),
       latest_period: latestPeriod,
       previous_period: previousPeriod,
@@ -409,7 +418,12 @@ export default async function handler(req, res) {
         lobbyist_slug: slugify(row.lobbyist_name || ""),
         officials: row.officials ? String(row.officials).split(",").filter(Boolean) : []
       }))
-    })
+    }
+
+    writeCache(cacheKey, payload, 5 * 60 * 1000)
+    res.setHeader("X-Data-Cache", "MISS")
+    res.setHeader("Cache-Control", "public, max-age=3600, stale-while-revalidate=120")
+    res.status(200).json(payload)
   } catch (err) {
     console.error("Error building exploration insights:", err)
     res.status(500).json({

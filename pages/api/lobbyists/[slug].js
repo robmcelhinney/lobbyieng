@@ -1,5 +1,6 @@
 import sqlite3 from "sqlite3"
 import { open } from "sqlite"
+import { buildCacheKey, readCache, writeCache } from "../../../lib/serverCache"
 
 function slugify(name) {
   return name
@@ -13,6 +14,19 @@ function slugify(name) {
 export default async function handler(req, res) {
   try {
     const { slug, page = 1, official, year, method } = req.query
+    const cacheKey = buildCacheKey("lobbyist-detail", {
+      slug,
+      page,
+      official,
+      year,
+      method: Array.isArray(method) ? method.join(",") : method
+    })
+    const cached = readCache(cacheKey)
+    if (cached) {
+      res.setHeader("X-Data-Cache", "HIT")
+      res.status(200).json(cached)
+      return
+    }
     const PER_PAGE = 10
     const offset = (page - 1) * PER_PAGE
 
@@ -190,7 +204,7 @@ export default async function handler(req, res) {
       new Set(allRecords.map((r) => new Date(r.date_published).getFullYear().toString()).filter(Boolean))
     ).sort((a, b) => b - a)
 
-    res.status(200).json({
+    const payload = {
       name: canonical,
       slug: slugify(canonical),
       total,
@@ -205,7 +219,11 @@ export default async function handler(req, res) {
         yearFilter: year || "",
         methodFilter: method || ""
       }
-    })
+    }
+
+    writeCache(cacheKey, payload, 2 * 60 * 1000)
+    res.setHeader("X-Data-Cache", "MISS")
+    res.status(200).json(payload)
   } catch (err) {
     console.error("Error in lobbyist detail API:", err)
     res.status(500).json({ error: "Internal error", details: err.message })

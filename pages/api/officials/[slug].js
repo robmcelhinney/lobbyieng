@@ -1,5 +1,6 @@
 import sqlite3 from "sqlite3"
 import { open } from "sqlite"
+import { buildCacheKey, readCache, writeCache } from "../../../lib/serverCache"
 
 function slugify(name) {
   return name
@@ -27,6 +28,21 @@ function toIsoOrNull(value) {
 export default async function handler(req, res) {
   try {
     const { slug, page = 1, lobbyist, year, method, job_titles, per_page = 10 } = req.query
+    const cacheKey = buildCacheKey("official-detail", {
+      slug,
+      page,
+      lobbyist,
+      year,
+      method: Array.isArray(method) ? method.join(",") : method,
+      job_titles,
+      per_page
+    })
+    const cached = readCache(cacheKey)
+    if (cached) {
+      res.setHeader("X-Data-Cache", "HIT")
+      res.status(200).json(cached)
+      return
+    }
 
     let perPageNum = 10
     let returnAll = false
@@ -285,7 +301,7 @@ export default async function handler(req, res) {
       new Set(allRecords.flatMap((r) => (r.lobbying_activities || []).map(extractMethod)).filter(Boolean))
     ).sort()
 
-    res.status(200).json({
+    const payload = {
       name: canonical,
       slug: slugify(canonical),
       total,
@@ -309,7 +325,11 @@ export default async function handler(req, res) {
         yearFilter: year || "",
         methodFilter: method || ""
       }
-    })
+    }
+
+    writeCache(cacheKey, payload, 2 * 60 * 1000)
+    res.setHeader("X-Data-Cache", "MISS")
+    res.status(200).json(payload)
   } catch (err) {
     console.error("Error in official detail API:", err)
     res.status(500).json({ error: "Internal error", details: err.message })
