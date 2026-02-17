@@ -3,7 +3,6 @@ import Head from "next/head"
 import Select from "react-select"
 import LobbyingCard from "../../components/LobbyingCard"
 import { useState, useEffect, useMemo } from "react"
-import Image from "next/image"
 import { getServerBaseUrl } from "../../lib/serverBaseUrl"
 
 function formatDate(value) {
@@ -54,13 +53,12 @@ function PoliticianImage({ slug, name }) {
   if (!slug) return null
   const imagePath = `/images/td_thumbnails/${slug}.jpg`
   return imgExists ? (
-    <Image
+    <img
       src={imagePath}
       alt={name}
-      className="mx-auto mb-4 rounded shadow max-h-48"
-      width={192}
-      height={192}
+      className="mx-auto mb-4 rounded shadow max-h-56 w-auto h-auto"
       onError={() => setImgExists(false)}
+      loading="lazy"
     />
   ) : null
 }

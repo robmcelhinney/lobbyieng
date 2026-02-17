@@ -4,9 +4,9 @@ Lobbyieng visualises lobbying activity in Ireland. It scrapes the official Regis
 
 ## Screenshots
 
-![Dashboard with filter controls](assets/images/dashboard.png)
+![Dashboard with filter controls](assets/images/homepage.png)
 
-![Interactive graph of connections](assets/images/graph-view.png)
+![Interactive graph of connections](assets/images/official.png)
 
 ## 🚀 Features
 
@@ -97,6 +97,7 @@ docker compose up -d
 ```
 
 This uses:
+
 - `Dockerfile` for the Next.js app image
 - `docker-compose.yml` for service orchestration
 - `nginx.conf` for reverse-proxy behavior
