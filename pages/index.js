@@ -46,33 +46,6 @@ const exploreCards = [
   }
 ]
 
-const guidedTour = [
-  {
-    title: "Journalist Workflow",
-    steps: [
-      "Start in Explore for top movers and contact hotspots.",
-      "Open an official page and narrow by year/method.",
-      "Share the filtered permalink and export records for your notes."
-    ]
-  },
-  {
-    title: "Student Workflow",
-    steps: [
-      "Use Data & Limitations to understand coverage and caveats.",
-      "Pick two officials in Chord to compare overlap.",
-      "Validate findings by checking source record links."
-    ]
-  },
-  {
-    title: "Citizen Workflow",
-    steps: [
-      "Find a TD and inspect who contacted them recently.",
-      "Switch method/year filters to focus on specific activity.",
-      "Use Connections view to see repeat lobbyist patterns."
-    ]
-  }
-]
-
 export async function getServerSideProps() {
   try {
     const metadata = await getDataMetadata()
