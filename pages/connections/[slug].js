@@ -11,6 +11,7 @@ export default function ConnectionsOfficial() {
   const router = useRouter()
   const { slug } = router.query
   const officialSlug = slug ? String(slug).trim().toLowerCase() : ""
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || ""
 
   const [graphData, setGraphData] = useState({ nodes: [], links: [] })
   const fgRef = useRef()
@@ -81,7 +82,6 @@ export default function ConnectionsOfficial() {
 
   useEffect(() => {
     async function fetchLatestYearAndMethodAndData() {
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (req ? `https://${req.headers.host}` : "")
       try {
         const res = await fetch(`${baseUrl}/api/periods-latest`)
         let latestYear = null
