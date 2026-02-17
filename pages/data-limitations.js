@@ -128,6 +128,18 @@ export default function DataLimitationsPage({ metadata, fetchError }) {
               <li>Some records can have missing or inconsistent official names, titles, or activity details.</li>
               <li>This site depends on periodic CSV exports and is not a real-time mirror of lobbying.ie.</li>
             </ul>
+            <p className="mt-4 text-sm md:text-base">
+              Found a data problem?{" "}
+              <a
+                href="https://github.com/robmcelhinney/lobbyieng/issues/new?template=report-data-issue.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold hover:underline"
+              >
+                Report a data issue
+              </a>
+              .
+            </p>
           </div>
         </section>
       </main>

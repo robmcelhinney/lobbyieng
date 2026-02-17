@@ -1,6 +1,6 @@
 import Head from "next/head"
 import ChordDiagram from "../components/ChordDiagram"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Select from "react-select"
 import { useRouter } from "next/router"
 
@@ -18,6 +18,7 @@ export default function ChordPage() {
   const [availableYears, setAvailableYears] = useState([])
   const [copyStatus, setCopyStatus] = useState("")
   const [queryReady, setQueryReady] = useState(false)
+  const initialQueryApplied = useRef(false)
 
   // Track color mode and update on class change
   const [colorMode, setColorMode] = useState(() => {
@@ -100,13 +101,14 @@ export default function ChordPage() {
 
   // Fetch all officials for autocomplete and available years
   useEffect(() => {
-    if (!router.isReady) return
+    if (!router.isReady || initialQueryApplied.current) return
     const { official1, official2, start_year, end_year, max_lobbyists } = router.query
     if (typeof official1 === "string") setSelected1(official1)
     if (typeof official2 === "string") setSelected2(official2)
     if (typeof start_year === "string" && /^\d+$/.test(start_year)) setStartYear(Number(start_year))
     if (typeof end_year === "string" && /^\d+$/.test(end_year)) setEndYear(Number(end_year))
     if (typeof max_lobbyists === "string" && /^\d+$/.test(max_lobbyists)) setMaxLobbyists(Number(max_lobbyists))
+    initialQueryApplied.current = true
     setQueryReady(true)
   }, [router.isReady, router.query])
 
@@ -122,15 +124,27 @@ export default function ChordPage() {
   }, [])
 
   useEffect(() => {
-    if (!queryReady) return
+    if (!router.isReady || !queryReady) return
     const nextQuery = {}
     if (selected1) nextQuery.official1 = selected1
     if (selected2) nextQuery.official2 = selected2
     if (startYear) nextQuery.start_year = String(startYear)
     if (endYear) nextQuery.end_year = String(endYear)
     if (maxLobbyists !== 10) nextQuery.max_lobbyists = String(maxLobbyists)
-    router.replace({ pathname: "/chord", query: nextQuery }, undefined, { shallow: true })
-  }, [selected1, selected2, startYear, endYear, maxLobbyists, queryReady, router])
+
+    const currentQuery = router.query
+    const nextEntries = Object.entries(nextQuery).sort(([a], [b]) => a.localeCompare(b))
+    const currentEntries = Object.entries(currentQuery)
+      .filter(([, value]) => typeof value === "string")
+      .map(([key, value]) => [key, value])
+      .sort(([a], [b]) => a.localeCompare(b))
+
+    if (JSON.stringify(nextEntries) === JSON.stringify(currentEntries)) return
+
+    router
+      .replace({ pathname: "/chord", query: nextQuery }, undefined, { shallow: true, scroll: false })
+      .catch(() => {})
+  }, [selected1, selected2, startYear, endYear, maxLobbyists, queryReady, router, router.isReady, router.query])
 
   // Fetch chord data when both officials or time range changes
   useEffect(() => {
@@ -159,7 +173,20 @@ export default function ChordPage() {
   const copyPermalink = async () => {
     if (typeof window === "undefined") return
     try {
-      await navigator.clipboard.writeText(window.location.href)
+      const href = window.location.href
+      if (window.isSecureContext && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(href)
+      } else {
+        const input = document.createElement("textarea")
+        input.value = href
+        input.setAttribute("readonly", "")
+        input.style.position = "absolute"
+        input.style.left = "-9999px"
+        document.body.appendChild(input)
+        input.select()
+        document.execCommand("copy")
+        document.body.removeChild(input)
+      }
       setCopyStatus("Link copied")
     } catch {
       setCopyStatus("Copy failed")

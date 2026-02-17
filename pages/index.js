@@ -46,6 +46,33 @@ const exploreCards = [
   }
 ]
 
+const guidedTour = [
+  {
+    title: "Journalist Workflow",
+    steps: [
+      "Start in Explore for top movers and contact hotspots.",
+      "Open an official page and narrow by year/method.",
+      "Share the filtered permalink and export records for your notes."
+    ]
+  },
+  {
+    title: "Student Workflow",
+    steps: [
+      "Use Data & Limitations to understand coverage and caveats.",
+      "Pick two officials in Chord to compare overlap.",
+      "Validate findings by checking source record links."
+    ]
+  },
+  {
+    title: "Citizen Workflow",
+    steps: [
+      "Find a TD and inspect who contacted them recently.",
+      "Switch method/year filters to focus on specific activity.",
+      "Use Connections view to see repeat lobbyist patterns."
+    ]
+  }
+]
+
 export async function getServerSideProps() {
   try {
     const metadata = await getDataMetadata()
@@ -112,7 +139,12 @@ export default function Home({ metadata, fetchError }) {
                 <p className="text-muted-ui text-sm mt-1">Quick context from the most recent database build.</p>
                 <p className="text-muted-ui text-sm mt-2">
                   Source:{" "}
-                  <a href="https://www.lobbying.ie/" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline">
+                  <a
+                    href="https://www.lobbying.ie/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold hover:underline"
+                  >
                     Register of Lobbying
                   </a>
                 </p>
@@ -168,10 +200,33 @@ export default function Home({ metadata, fetchError }) {
         </section>
 
         <footer className="max-w-6xl mx-auto px-4 pb-10 text-center text-muted-ui text-sm">
-          Contact:{" "}
-          <a href="mailto:lobbyieng@robmcelhinney" className="font-semibold hover:underline">
-            lobbyieng@robmcelhinney
-          </a>
+          <div className="surface-card">
+            <h2 className="text-lg font-semibold">Feedback & Data Issues</h2>
+            <p className="mt-2 text-sm text-muted-ui">
+              Spotted an error or missing context? Send feedback or open a structured data issue.
+            </p>
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+              <a href="mailto:lobbyieng@robmcelhinney" className="font-semibold hover:underline">
+                Contact by email
+              </a>
+              <a
+                href="https://github.com/robmcelhinney/lobbyieng/issues/new?template=report-data-issue.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold hover:underline"
+              >
+                Report data issue
+              </a>
+              <a
+                href="https://github.com/robmcelhinney/lobbyieng/issues/new"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold hover:underline"
+              >
+                General feedback
+              </a>
+            </div>
+          </div>
         </footer>
       </main>
     </>
