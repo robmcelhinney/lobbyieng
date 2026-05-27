@@ -179,7 +179,7 @@ export default function Home({ metadata, fetchError }) {
               Spotted an error or missing context? Send feedback or open a structured data issue.
             </p>
             <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-              <a href="mailto:lobbyieng@robmcelhinney" className="font-semibold hover:underline">
+              <a href="mailto:lobbyieng@robmcelhinney.com" className="font-semibold hover:underline">
                 Contact by email
               </a>
               <a
