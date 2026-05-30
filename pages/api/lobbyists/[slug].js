@@ -12,13 +12,17 @@ function slugify(name) {
 
 export default async function handler(req, res) {
   try {
-    const { slug, page = 1, official, year, method } = req.query
+    const { slug, page = 1, official, year, method, sort = "newest" } = req.query
+    const sortValue = Array.isArray(sort) ? sort[0] : sort
+    const allowedSorts = new Set(["newest", "fewest-officials", "most-officials"])
+    const activeSort = allowedSorts.has(sortValue) ? sortValue : "newest"
     const cacheKey = buildCacheKey("lobbyist-detail", {
       slug,
       page,
       official,
       year,
-      method: Array.isArray(method) ? method.join(",") : method
+      method: Array.isArray(method) ? method.join(",") : method,
+      sort: activeSort
     })
     const cached = readCache(cacheKey)
     if (cached) {
@@ -84,9 +88,23 @@ export default async function handler(req, res) {
     const countRow = await db.get(countQuery, [canonical.toLowerCase(), ...filterParams])
     const total = countRow?.total || 0
 
+    const orderClause =
+      activeSort === "fewest-officials"
+        ? "CASE WHEN dpo_count = 0 THEN 1 ELSE 0 END, dpo_count ASC, lr.date_published DESC"
+        : activeSort === "most-officials"
+          ? "dpo_count DESC, lr.date_published DESC"
+          : "lr.date_published DESC"
+
     // Query paginated records with filters.
     const baseQuery = `
       SELECT lr.*, lr.any_dpo_or_former_dpo,
+        (
+          SELECT COUNT(*)
+          FROM dpo_entries dpo
+          WHERE dpo.lobbying_record_id = lr.id
+            AND dpo.person_name IS NOT NULL
+            AND TRIM(dpo.person_name) != ''
+        ) AS dpo_count,
         (
           SELECT GROUP_CONCAT(dpo.person_name || '|' || dpo.job_title || '|' || dpo.public_body, '||')
           FROM dpo_entries dpo
@@ -100,7 +118,7 @@ export default async function handler(req, res) {
       FROM lobbying_records lr
       WHERE LOWER(lr.lobbyist_name) = ?
       ${filterConditions}
-      ORDER BY lr.date_published DESC
+      ORDER BY ${orderClause}
       LIMIT ? OFFSET ?
     `
 
@@ -126,6 +144,7 @@ export default async function handler(req, res) {
         specific_details: r.specific_details?.slice(0, 1000),
         intended_results: r.intended_results?.slice(0, 1000),
         isFormerDPO: r.any_dpo_or_former_dpo === "Yes",
+        official_count: r.dpo_count || dpo_entries.length,
         dpo_entries,
         lobbying_activities:
           typeof r.activities === "string"
@@ -213,7 +232,8 @@ export default async function handler(req, res) {
       currentFilters: {
         officialFilter: official || "",
         yearFilter: year || "",
-        methodFilter: method || ""
+        methodFilter: method || "",
+        sort: activeSort
       }
     }
 

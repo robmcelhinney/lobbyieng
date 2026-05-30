@@ -26,7 +26,22 @@ function toIsoOrNull(value) {
 
 export default async function handler(req, res) {
   try {
-    const { slug, page = 1, lobbyist, year, method, job_titles, per_page = 10 } = req.query
+    const {
+      slug,
+      page = 1,
+      lobbyist,
+      year,
+      method,
+      job_titles,
+      per_page = 10,
+      official_scope,
+      sort = "newest"
+    } = req.query
+    const officialScopeValue = Array.isArray(official_scope) ? official_scope[0] : official_scope
+    const activeOfficialScope = officialScopeValue === "only-this-official" ? "only-this-official" : "all"
+    const sortValue = Array.isArray(sort) ? sort[0] : sort
+    const allowedSorts = new Set(["newest", "fewest-officials", "most-officials"])
+    const activeSort = allowedSorts.has(sortValue) ? sortValue : "newest"
     const cacheKey = buildCacheKey("official-detail", {
       slug,
       page,
@@ -34,7 +49,9 @@ export default async function handler(req, res) {
       year,
       method: Array.isArray(method) ? method.join(",") : method,
       job_titles,
-      per_page
+      per_page,
+      official_scope: activeOfficialScope,
+      sort: activeSort
     })
     const cached = readCache(cacheKey)
     if (cached) {
@@ -101,6 +118,17 @@ export default async function handler(req, res) {
       filterConditions += " AND strftime('%Y', lr.date_published) = ? "
       filterParams.push(year)
     }
+    if (activeOfficialScope === "only-this-official") {
+      filterConditions += `
+        AND (
+          SELECT COUNT(DISTINCT dpo.person_name)
+          FROM dpo_entries dpo
+          WHERE dpo.lobbying_record_id = lr.id
+            AND dpo.person_name IS NOT NULL
+            AND TRIM(dpo.person_name) != ''
+        ) = 1
+      `
+    }
 
     // Add job_title filter if provided
     let jobTitleCondition = ""
@@ -123,9 +151,26 @@ export default async function handler(req, res) {
     const countRow = await db.get(countQuery, [canonical, ...(allowedJobTitles || []), ...filterParams])
     const total = countRow?.total || 0
 
+    const dpoCountSelect = `
+        (
+          SELECT COUNT(DISTINCT dpo.person_name)
+          FROM dpo_entries dpo
+          WHERE dpo.lobbying_record_id = lr.id
+            AND dpo.person_name IS NOT NULL
+            AND TRIM(dpo.person_name) != ''
+        ) AS dpo_count,
+    `
+    const orderClause =
+      activeSort === "fewest-officials"
+        ? "CASE WHEN dpo_count = 0 THEN 1 ELSE 0 END, dpo_count ASC, lr.date_published DESC"
+        : activeSort === "most-officials"
+          ? "dpo_count DESC, lr.date_published DESC"
+          : "lr.date_published DESC"
+
     // Define baseQuery for paginated fetch
     const baseQuery = `
       SELECT lr.*,
+        ${dpoCountSelect}
         (
           SELECT GROUP_CONCAT(dpo.person_name || '|' || dpo.job_title || '|' || dpo.public_body, '||')
           FROM dpo_entries dpo
@@ -144,7 +189,7 @@ export default async function handler(req, res) {
           ${jobTitleCondition}
       )
       ${filterConditions}
-      ORDER BY lr.date_published DESC
+      ORDER BY ${orderClause}
       LIMIT ? OFFSET ?
     `
 
@@ -154,6 +199,7 @@ export default async function handler(req, res) {
       // Return all records matching filters (no LIMIT/OFFSET)
       const allQuery = `
       SELECT lr.*,
+        ${dpoCountSelect}
         (
           SELECT GROUP_CONCAT(dpo.person_name || '|' || dpo.job_title || '|' || dpo.public_body, '||')
           FROM dpo_entries dpo
@@ -172,7 +218,7 @@ export default async function handler(req, res) {
           ${jobTitleCondition}
       )
       ${filterConditions}
-      ORDER BY lr.date_published DESC
+      ORDER BY ${orderClause}
     `
       records = await db.all(allQuery, [canonical, ...(allowedJobTitles || []), ...filterParams])
     } else {
@@ -188,6 +234,7 @@ export default async function handler(req, res) {
       // new fields
       any_dpo_or_former_dpo: r.any_dpo_or_former_dpo,
       isFormerDPO: r.any_dpo_or_former_dpo === "Yes",
+      official_count: r.dpo_count || 0,
       dpo_entries:
         typeof r.dpos === "string"
           ? r.dpos.split("||").map((entry) => {
@@ -319,7 +366,9 @@ export default async function handler(req, res) {
       currentFilters: {
         lobbyistFilter: lobbyist || "",
         yearFilter: year || "",
-        methodFilter: method || ""
+        methodFilter: method || "",
+        officialScope: activeOfficialScope,
+        sort: activeSort
       }
     }
 

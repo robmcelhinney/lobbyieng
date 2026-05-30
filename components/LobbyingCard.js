@@ -10,6 +10,7 @@ export default function LobbyingCard({ record }) {
     dpo_entries = [],
     lobbying_activities = [],
     isFormerDPO,
+    official_count,
     url
   } = record
 
@@ -21,6 +22,7 @@ export default function LobbyingCard({ record }) {
 
   // Derive official names from dpo_entries
   const parsedDPOs = Array.isArray(dpo_entries) ? dpo_entries.map((d) => d.person_name).filter(Boolean) : []
+  const officialCount = typeof official_count === "number" ? official_count : parsedDPOs.length
 
   // Show less / read more for Officials
   const [officialsExpanded, setOfficialsExpanded] = useState(false)
@@ -52,7 +54,12 @@ export default function LobbyingCard({ record }) {
             {lobbyist_name}
           </Link>
         </h3>
-        <div className="text-xs md:text-sm text-muted-ui">{formattedDate}</div>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <span className="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-[color:var(--ui-bg-soft)] text-[color:var(--ui-text)]">
+            {officialCount} {officialCount === 1 ? "official" : "officials"}
+          </span>
+          <div className="text-xs md:text-sm text-muted-ui">{formattedDate}</div>
+        </div>
       </div>
 
       {isFormerDPO && (
@@ -106,7 +113,10 @@ export default function LobbyingCard({ record }) {
             ))}
           </div>
           {hasMoreOfficials && (
-            <button onClick={() => setOfficialsExpanded(!officialsExpanded)} className="mt-2 text-sm underline font-semibold">
+            <button
+              onClick={() => setOfficialsExpanded(!officialsExpanded)}
+              className="mt-2 text-sm underline font-semibold"
+            >
               {officialsExpanded ? "Show fewer officials" : "Show all officials"}
             </button>
           )}
@@ -127,7 +137,10 @@ export default function LobbyingCard({ record }) {
             ))}
           </div>
           {hasMoreMethods && (
-            <button onClick={() => setMethodsExpanded(!methodsExpanded)} className="mt-2 text-sm underline font-semibold">
+            <button
+              onClick={() => setMethodsExpanded(!methodsExpanded)}
+              className="mt-2 text-sm underline font-semibold"
+            >
               {methodsExpanded ? "Show fewer methods" : "Show all methods"}
             </button>
           )}

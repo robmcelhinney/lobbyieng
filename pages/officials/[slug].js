@@ -87,6 +87,15 @@ export default function OfficialPage({ officialData }) {
   const lobbyistOptions = [{ value: "", label: "All Lobbyists" }, ...lobbyists.map((l) => ({ value: l, label: l }))]
   const currentLobbyist =
     lobbyistOptions.find((opt) => opt.value === currentFilters.lobbyistFilter) || lobbyistOptions[0]
+  const officialScopeOptions = [
+    { value: "all", label: "All records" },
+    { value: "only-this-official", label: "Only this official" }
+  ]
+  const sortOptions = [
+    { value: "newest", label: "Newest first" },
+    { value: "fewest-officials", label: "Fewest officials first" },
+    { value: "most-officials", label: "Most officials first" }
+  ]
 
   const methodOptions = useMemo(() => methods.map((m) => ({ value: m, label: m })), [methods])
   const selectedMethods = useMemo(() => {
@@ -152,6 +161,10 @@ export default function OfficialPage({ officialData }) {
     const params = new URLSearchParams()
     if (currentFilters.lobbyistFilter) params.set("lobbyist", currentFilters.lobbyistFilter)
     if (currentFilters.yearFilter) params.set("year", currentFilters.yearFilter)
+    if (currentFilters.officialScope === "only-this-official") {
+      params.set("official_scope", currentFilters.officialScope)
+    }
+    if (currentFilters.sort && currentFilters.sort !== "newest") params.set("sort", currentFilters.sort)
 
     const methodFilter = currentFilters.methodFilter
     if (Array.isArray(methodFilter)) {
@@ -222,11 +235,15 @@ export default function OfficialPage({ officialData }) {
             <h2 className="text-xl font-semibold mb-3">Official Profile</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="kpi-chip">
-                <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-300">Most Recent Title</div>
+                <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-300">
+                  Most Recent Title
+                </div>
                 <div className="mt-1 text-sm font-semibold">{profile?.most_recent_title || "Unavailable"}</div>
               </div>
               <div className="kpi-chip">
-                <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-300">Most Recent Public Body</div>
+                <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-300">
+                  Most Recent Public Body
+                </div>
                 <div className="mt-1 text-sm font-semibold">{profile?.most_recent_public_body || "Unavailable"}</div>
               </div>
               <div className="kpi-chip">
@@ -332,6 +349,36 @@ export default function OfficialPage({ officialData }) {
                 }}
               />
             </div>
+
+            <div className="w-48">
+              <label className="block mb-1 text-sm font-semibold text-muted-ui">Official Scope</label>
+              <select
+                value={currentFilters.officialScope || "all"}
+                onChange={(e) => handleFilterChange("official_scope", e.target.value)}
+                className="w-full border border-[var(--ui-border)] rounded-md px-3 py-2 bg-white/80 dark:bg-slate-900/30 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {officialScopeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="w-56">
+              <label className="block mb-1 text-sm font-semibold text-muted-ui">Sort</label>
+              <select
+                value={currentFilters.sort || "newest"}
+                onChange={(e) => handleFilterChange("sort", e.target.value)}
+                className="w-full border border-[var(--ui-border)] rounded-md px-3 py-2 bg-white/80 dark:bg-slate-900/30 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {sortOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Lobbying Records Section */}
@@ -361,7 +408,10 @@ export default function OfficialPage({ officialData }) {
               )}
               {page > 3 && (
                 <>
-                  <button onClick={() => handlePageChange(1)} className="px-3 py-1 rounded-md bg-[color:var(--ui-primary)] text-white">
+                  <button
+                    onClick={() => handlePageChange(1)}
+                    className="px-3 py-1 rounded-md bg-[color:var(--ui-primary)] text-white"
+                  >
                     1
                   </button>
                   {page > 4 && <span className="px-2">…</span>}
@@ -394,7 +444,10 @@ export default function OfficialPage({ officialData }) {
                 </>
               )}
               {page < totalPages && (
-                <button onClick={() => handlePageChange(page + 1)} className="px-3 py-1 rounded-md bg-[color:var(--ui-primary)] text-white">
+                <button
+                  onClick={() => handlePageChange(page + 1)}
+                  className="px-3 py-1 rounded-md bg-[color:var(--ui-primary)] text-white"
+                >
                   Next →
                 </button>
               )}

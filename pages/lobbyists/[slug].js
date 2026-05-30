@@ -59,6 +59,11 @@ export default function LobbyistPage({ lobbyistData, fetchError }) {
   const officialOptions = [{ value: "", label: "All Officials" }, ...officials.map((o) => ({ value: o, label: o }))]
   const currentOfficial =
     officialOptions.find((opt) => opt.value === (currentFilters?.officialFilter || "")) || officialOptions[0]
+  const sortOptions = [
+    { value: "newest", label: "Newest first" },
+    { value: "fewest-officials", label: "Fewest officials first" },
+    { value: "most-officials", label: "Most officials first" }
+  ]
 
   const methodOptions = useMemo(() => methods.map((m) => ({ value: m, label: m })), [methods])
   const selectedMethods = useMemo(() => {
@@ -100,7 +105,10 @@ export default function LobbyistPage({ lobbyistData, fetchError }) {
         <div className="surface-card text-center">
           <h1 className="text-2xl font-bold mb-2">Error loading lobbyist data</h1>
           <p className="mb-4 text-red-600">{fetchError}</p>
-          <button className="px-4 py-2 rounded-md bg-[color:var(--ui-primary)] text-white" onClick={() => router.reload()}>
+          <button
+            className="px-4 py-2 rounded-md bg-[color:var(--ui-primary)] text-white"
+            onClick={() => router.reload()}
+          >
             Retry
           </button>
         </div>
@@ -135,6 +143,7 @@ export default function LobbyistPage({ lobbyistData, fetchError }) {
     const params = new URLSearchParams()
     if (currentFilters?.officialFilter) params.set("official", currentFilters.officialFilter)
     if (currentFilters?.yearFilter) params.set("year", currentFilters.yearFilter)
+    if (currentFilters?.sort && currentFilters.sort !== "newest") params.set("sort", currentFilters.sort)
 
     const methodFilter = currentFilters?.methodFilter
     if (Array.isArray(methodFilter)) {
@@ -237,6 +246,22 @@ export default function LobbyistPage({ lobbyistData, fetchError }) {
                 }}
               />
             </div>
+
+            {/* Sort */}
+            <div className="w-56">
+              <label className="block mb-1 text-sm font-semibold text-muted-ui">Sort</label>
+              <select
+                value={currentFilters.sort || "newest"}
+                onChange={(e) => handleFilterChange("sort", e.target.value)}
+                className="w-full border border-[var(--ui-border)] rounded-md px-3 py-2 bg-white/80 dark:bg-slate-900/30 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {sortOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <section className="surface-card">
@@ -256,13 +281,19 @@ export default function LobbyistPage({ lobbyistData, fetchError }) {
             {/* Pagination */}
             <div className="flex flex-wrap items-center gap-2 mt-6">
               {page > 1 && (
-                <button onClick={() => handlePageChange(page - 1)} className="px-3 py-1 rounded-md bg-[color:var(--ui-primary)] text-white">
+                <button
+                  onClick={() => handlePageChange(page - 1)}
+                  className="px-3 py-1 rounded-md bg-[color:var(--ui-primary)] text-white"
+                >
                   ← Prev
                 </button>
               )}
               {page > 3 && (
                 <>
-                  <button onClick={() => handlePageChange(1)} className="px-3 py-1 rounded-md bg-[color:var(--ui-primary)] text-white">
+                  <button
+                    onClick={() => handlePageChange(1)}
+                    className="px-3 py-1 rounded-md bg-[color:var(--ui-primary)] text-white"
+                  >
                     1
                   </button>
                   {page > 4 && <span className="px-2">…</span>}
@@ -295,7 +326,10 @@ export default function LobbyistPage({ lobbyistData, fetchError }) {
                 </>
               )}
               {page < totalPages && (
-                <button onClick={() => handlePageChange(page + 1)} className="px-3 py-1 rounded-md bg-[color:var(--ui-primary)] text-white">
+                <button
+                  onClick={() => handlePageChange(page + 1)}
+                  className="px-3 py-1 rounded-md bg-[color:var(--ui-primary)] text-white"
+                >
                   Next →
                 </button>
               )}

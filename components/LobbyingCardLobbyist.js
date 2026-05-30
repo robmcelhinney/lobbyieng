@@ -20,6 +20,12 @@ function extractMethodFromActivity(activity) {
 
 export default function LobbyingCardLobbyist({ record }) {
   const date = record.date_published ? record.date_published.slice(0, 10) : "Unknown"
+  const officialCount =
+    typeof record.official_count === "number"
+      ? record.official_count
+      : Array.isArray(record.dpo_entries)
+        ? record.dpo_entries.length
+        : 0
   const politicians =
     record.dpo_entries && record.dpo_entries.length > 0
       ? record.dpo_entries.map((dpo, i) => (
@@ -47,21 +53,26 @@ export default function LobbyingCardLobbyist({ record }) {
       <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
         <div className="text-xs md:text-sm text-muted-ui">{date}</div>
 
-        {isFormerDPO && (
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/45 dark:text-red-200">
-              Current/Former DPO
-            </span>
-            <a
-              href="https://www.lobbying.ie/help-resources/frequently-asked-questions/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs font-semibold hover:underline"
-            >
-              FAQ
-            </a>
-          </div>
-        )}
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <span className="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-[color:var(--ui-bg-soft)] text-[color:var(--ui-text)]">
+            {officialCount} {officialCount === 1 ? "official" : "officials"}
+          </span>
+          {isFormerDPO && (
+            <>
+              <span className="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/45 dark:text-red-200">
+                Current/Former DPO
+              </span>
+              <a
+                href="https://www.lobbying.ie/help-resources/frequently-asked-questions/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-semibold hover:underline"
+              >
+                FAQ
+              </a>
+            </>
+          )}
+        </div>
       </div>
       <div className="mb-2 text-sm leading-6">
         <span className="font-semibold">Politician(s) lobbied:</span> {politicians}
@@ -107,7 +118,12 @@ export default function LobbyingCardLobbyist({ record }) {
         </div>
       </div>
       <div className="mt-4 pt-3 border-t border-[var(--ui-border)]">
-        <a href={`https://${record.url}`} className="font-semibold hover:underline" target="_blank" rel="noopener noreferrer">
+        <a
+          href={`https://${record.url}`}
+          className="font-semibold hover:underline"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           View full record
         </a>
       </div>
