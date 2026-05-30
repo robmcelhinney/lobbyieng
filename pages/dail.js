@@ -3,6 +3,7 @@ import Link from "next/link"
 import Select from "react-select"
 import Head from "next/head"
 import { getServerBaseUrl } from "../lib/serverBaseUrl"
+import { selectStyles } from "../lib/selectStyles"
 
 const topOfficialsTitles = [
   "TD",
@@ -112,7 +113,7 @@ export default function Index({ officials: initialOfficials, allPeriods, latestP
               <select
                 value={selectedPeriod}
                 onChange={(e) => setSelectedPeriod(e.target.value)}
-                className="w-full border border-[var(--ui-border)] rounded-md px-3 py-2 shadow-sm bg-white/80 dark:bg-slate-900/30 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="native-select w-full border border-[var(--ui-border)] rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">All Periods</option>
                 {allPeriods.map((period) => (
@@ -131,20 +132,7 @@ export default function Index({ officials: initialOfficials, allPeriods, latestP
                 onChange={setSelectedName}
                 isClearable
                 placeholder="Search by name..."
-                styles={{
-                  control: (base) => ({
-                    ...base,
-                    backgroundColor: "rgba(255,255,255,0.85)",
-                    borderColor: "var(--ui-border)",
-                    color: "var(--ui-text)"
-                  }),
-                  menu: (base) => ({
-                    ...base,
-                    backgroundColor: "var(--ui-surface)",
-                    color: "var(--ui-text)",
-                    zIndex: 9999
-                  })
-                }}
+                styles={selectStyles}
               />
             </div>
 

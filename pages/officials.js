@@ -3,6 +3,7 @@ import Link from "next/link"
 import Select from "react-select"
 import Head from "next/head"
 import { getServerBaseUrl } from "../lib/serverBaseUrl"
+import { selectStyles } from "../lib/selectStyles"
 
 export async function getServerSideProps({ req }) {
   const baseUrl = getServerBaseUrl(req)
@@ -113,20 +114,7 @@ export default function OfficialsPage({ officials: initialOfficials }) {
                   isClearable
                   closeMenuOnSelect={false}
                   placeholder="Filter job titles..."
-                  styles={{
-                    control: (base) => ({
-                      ...base,
-                      backgroundColor: "rgba(255,255,255,0.85)",
-                      borderColor: "var(--ui-border)",
-                      color: "var(--ui-text)"
-                    }),
-                    menu: (base) => ({
-                      ...base,
-                      backgroundColor: "var(--ui-surface)",
-                      color: "var(--ui-text)",
-                      zIndex: 9999
-                    })
-                  }}
+                  styles={selectStyles}
                 />
               </div>
               {/* Period Filter */}
@@ -135,7 +123,7 @@ export default function OfficialsPage({ officials: initialOfficials }) {
                 <select
                   value={selectedPeriod}
                   onChange={(e) => setSelectedPeriod(e.target.value)}
-                  className="w-full px-4 py-2 border border-[var(--ui-border)] rounded-md shadow-sm bg-white/80 dark:bg-slate-900/30 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="native-select w-full px-4 py-2 border border-[var(--ui-border)] rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">All Periods</option>
                   {allPeriods.map((period) => (
@@ -154,20 +142,7 @@ export default function OfficialsPage({ officials: initialOfficials }) {
                   onChange={setSelectedName}
                   isClearable
                   placeholder="Search by name..."
-                  styles={{
-                    control: (base) => ({
-                      ...base,
-                      backgroundColor: "rgba(255,255,255,0.85)",
-                      borderColor: "var(--ui-border)",
-                      color: "var(--ui-text)"
-                    }),
-                    menu: (base) => ({
-                      ...base,
-                      backgroundColor: "var(--ui-surface)",
-                      color: "var(--ui-text)",
-                      zIndex: 9999
-                    })
-                  }}
+                  styles={selectStyles}
                 />
               </div>
             </div>

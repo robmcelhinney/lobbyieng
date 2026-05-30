@@ -4,6 +4,7 @@ import Select from "react-select"
 import LobbyingCardLobbyist from "../../components/LobbyingCardLobbyist"
 import { useState, useEffect, useMemo } from "react"
 import { getServerBaseUrl } from "../../lib/serverBaseUrl"
+import { selectStyles } from "../../lib/selectStyles"
 
 function toQueryString(query) {
   const params = []
@@ -83,21 +84,6 @@ export default function LobbyistPage({ lobbyistData, fetchError }) {
   useEffect(() => {
     setPendingMethods(selectedMethodOptions)
   }, [selectedMethodOptions])
-
-  const selectStyles = {
-    control: (base) => ({
-      ...base,
-      backgroundColor: "rgba(255,255,255,0.85)",
-      borderColor: "var(--ui-border)",
-      color: "var(--ui-text)"
-    }),
-    menu: (base) => ({
-      ...base,
-      backgroundColor: "var(--ui-surface)",
-      color: "var(--ui-text)",
-      zIndex: 9999
-    })
-  }
 
   if (fetchError) {
     return (
@@ -212,7 +198,7 @@ export default function LobbyistPage({ lobbyistData, fetchError }) {
               <select
                 value={currentFilters.yearFilter || ""}
                 onChange={(e) => handleFilterChange("year", e.target.value)}
-                className="w-full border border-[var(--ui-border)] rounded-md px-3 py-2 bg-white/80 dark:bg-slate-900/30 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="native-select w-full border border-[var(--ui-border)] rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">All Years</option>
                 {years.map((y) => (
@@ -253,7 +239,7 @@ export default function LobbyistPage({ lobbyistData, fetchError }) {
               <select
                 value={currentFilters.sort || "newest"}
                 onChange={(e) => handleFilterChange("sort", e.target.value)}
-                className="w-full border border-[var(--ui-border)] rounded-md px-3 py-2 bg-white/80 dark:bg-slate-900/30 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="native-select w-full border border-[var(--ui-border)] rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {sortOptions.map((option) => (
                   <option key={option.value} value={option.value}>

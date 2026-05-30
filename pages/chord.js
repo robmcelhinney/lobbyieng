@@ -258,7 +258,7 @@ export default function ChordPage() {
                 </label>
                 <select
                   id="startYear"
-                  className="border border-gray-300 dark:border-gray-600 px-2 py-1 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  className="native-select border border-[var(--ui-border)] px-2 py-1 rounded"
                   value={startYear}
                   onChange={(e) => setStartYear(Number(e.target.value))}
                 >
@@ -275,7 +275,7 @@ export default function ChordPage() {
                 </label>
                 <select
                   id="endYear"
-                  className="border border-gray-300 dark:border-gray-600 px-2 py-1 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  className="native-select border border-[var(--ui-border)] px-2 py-1 rounded"
                   value={endYear}
                   onChange={(e) => setEndYear(Number(e.target.value))}
                 >

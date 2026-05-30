@@ -365,7 +365,7 @@ export default function ConnectionsOfficial() {
                 <select
                   value={selectedYear}
                   onChange={(e) => setSelectedYear(e.target.value)}
-                  className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded px-2 py-1"
+                  className="native-select border border-[var(--ui-border)] rounded px-2 py-1"
                 >
                   <option value="All">All</option>
                   {years.map((year) => (
@@ -380,7 +380,7 @@ export default function ConnectionsOfficial() {
                 <select
                   value={selectedMethod}
                   onChange={(e) => setSelectedMethod(e.target.value)}
-                  className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded px-2 py-1"
+                  className="native-select border border-[var(--ui-border)] rounded px-2 py-1"
                 >
                   <option value="All">All</option>
                   {methods.map((method) => (

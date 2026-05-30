@@ -4,6 +4,7 @@ import Select from "react-select"
 import LobbyingCard from "../../components/LobbyingCard"
 import { useState, useEffect, useMemo } from "react"
 import { getServerBaseUrl } from "../../lib/serverBaseUrl"
+import { selectStyles } from "../../lib/selectStyles"
 
 function formatDate(value) {
   if (!value) return "Unavailable"
@@ -117,21 +118,6 @@ export default function OfficialPage({ officialData }) {
   }, [selectedMethodOptions])
 
   if (!officialData) return <div>Official not found</div>
-
-  const selectStyles = {
-    control: (base) => ({
-      ...base,
-      backgroundColor: "rgba(255,255,255,0.85)",
-      color: "var(--ui-text)",
-      borderColor: "var(--ui-border)"
-    }),
-    menu: (base) => ({
-      ...base,
-      backgroundColor: "var(--ui-surface)",
-      color: "var(--ui-text)",
-      zIndex: 9999
-    })
-  }
 
   const handleFilterChange = (filterName, value) => {
     let newQuery = { ...router.query, [filterName]: value, page: 1 }
@@ -315,7 +301,7 @@ export default function OfficialPage({ officialData }) {
               <select
                 value={currentFilters.yearFilter || ""}
                 onChange={(e) => handleFilterChange("year", e.target.value)}
-                className="w-full border border-[var(--ui-border)] rounded-md px-3 py-2 bg-white/80 dark:bg-slate-900/30 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="native-select w-full border border-[var(--ui-border)] rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">All Years</option>
                 {years.map((y) => (
@@ -355,7 +341,7 @@ export default function OfficialPage({ officialData }) {
               <select
                 value={currentFilters.officialScope || "all"}
                 onChange={(e) => handleFilterChange("official_scope", e.target.value)}
-                className="w-full border border-[var(--ui-border)] rounded-md px-3 py-2 bg-white/80 dark:bg-slate-900/30 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="native-select w-full border border-[var(--ui-border)] rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {officialScopeOptions.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -370,7 +356,7 @@ export default function OfficialPage({ officialData }) {
               <select
                 value={currentFilters.sort || "newest"}
                 onChange={(e) => handleFilterChange("sort", e.target.value)}
-                className="w-full border border-[var(--ui-border)] rounded-md px-3 py-2 bg-white/80 dark:bg-slate-900/30 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="native-select w-full border border-[var(--ui-border)] rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {sortOptions.map((option) => (
                   <option key={option.value} value={option.value}>
