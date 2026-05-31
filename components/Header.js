@@ -14,6 +14,7 @@ export default function Header() {
     { href: "/dail", label: "Find a TD" },
     { href: "/officials", label: "All Officials" },
     { href: "/lobbyists", label: "Find a Lobbyist" },
+    { href: "/committees", label: "Committees" },
     { href: "/explore", label: "Explore" },
     { href: "/data-limitations", label: "Data & Limitations" }
   ]
@@ -52,7 +53,11 @@ export default function Header() {
           } sm:flex flex-col sm:flex-row gap-2 sm:gap-3 items-center absolute sm:static top-14 left-0 w-full sm:w-auto hero-shell sm:bg-transparent z-20 px-4 sm:px-0 py-4 sm:py-0 transition-all`}
         >
           {navItems.map((item) => (
-            <Link key={item.href} href={item.href} className={`nav-pill ${isActive(item.href) ? "nav-pill-active" : ""}`}>
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`nav-pill ${isActive(item.href) ? "nav-pill-active" : ""}`}
+            >
               {item.label}
             </Link>
           ))}

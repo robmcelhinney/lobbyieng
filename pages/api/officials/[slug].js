@@ -10,6 +10,17 @@ function slugify(name) {
     .replace(/\s+/g, "-")
 }
 
+function committeeSlugify(name) {
+  return name
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+}
+
 // Helper: extract method from an activity string.
 // E.g., "One email to each of the listed TDs. - Email" returns "Email"
 function extractMethod(activityStr) {
@@ -334,6 +345,34 @@ export default async function handler(req, res) {
     const lastSeen = dpoProfileRows.length ? dpoProfileRows[0].date_published : null
     const distinctTitles = Array.from(new Set(dpoProfileRows.map((r) => r.job_title).filter(Boolean))).sort()
     const distinctBodies = Array.from(new Set(dpoProfileRows.map((r) => r.public_body).filter(Boolean))).sort()
+    const officialSlug = slugify(canonical)
+    let committeeMemberships = []
+    try {
+      committeeMemberships = await db.all(
+        `
+        SELECT
+          c.name,
+          c.url,
+          c.membership_url,
+          c.house_no,
+          c.scraped_at,
+          cm.role,
+          cm.member_name,
+          cm.member_uri,
+          cm.member_url,
+          cm.constituency
+        FROM committee_memberships cm
+        JOIN committees c ON c.id = cm.committee_id
+        WHERE cm.member_slug IN (?, ?)
+        ORDER BY c.name ASC, cm.role ASC
+        `,
+        [officialSlug, slug]
+      )
+    } catch (err) {
+      if (!String(err?.message || "").includes("no such table")) {
+        throw err
+      }
+    }
 
     // Compute unique filter options.
     const uniqueLobbyists = Array.from(new Set(allRecords.map((r) => r.lobbyist_name).filter(Boolean))).sort()
@@ -358,7 +397,11 @@ export default async function handler(req, res) {
         first_seen_at: firstSeen,
         last_seen_at: lastSeen,
         distinct_titles: distinctTitles,
-        distinct_public_bodies: distinctBodies
+        distinct_public_bodies: distinctBodies,
+        committee_memberships: committeeMemberships.map((committee) => ({
+          ...committee,
+          slug: committeeSlugify(committee.name)
+        }))
       },
       lobbyists: uniqueLobbyists,
       years: uniqueYears,

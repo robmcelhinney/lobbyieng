@@ -15,6 +15,7 @@ DATA_FOLDER = "data"  # Folder containing CSV files.
 DATABASE_URL = "sqlite:///lobbying.db"
 DERIVED_FOLDER = os.path.join("data", "derived")
 PRECOMPUTED_INSIGHTS_PATH = os.path.join(DERIVED_FOLDER, "explore_insights.json")
+COMMITTEE_MEMBERSHIPS_PATH = os.path.join(DERIVED_FOLDER, "committee_memberships.json")
 
 BANNED_NAMES = [
     "Skill Set Strategy Consultants", 
@@ -116,6 +117,30 @@ class LobbyingActivityEntry(Base):
 
     lobbying_record = relationship("LobbyingRecord", back_populates="activity_entries")
 
+class Committee(Base):
+    __tablename__ = "committees"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String)
+    url = Column(String, unique=True)
+    membership_url = Column(String)
+    house_no = Column(String)
+    source_url = Column(String)
+    scraped_at = Column(String)
+
+class CommitteeMembership(Base):
+    __tablename__ = "committee_memberships"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    committee_id = Column(Integer, ForeignKey("committees.id"))
+    member_name = Column(String)
+    member_slug = Column(String)
+    member_uri = Column(String)
+    member_url = Column(String)
+    role = Column(String)
+    constituency = Column(String)
+    email = Column(String)
+    phones = Column(String)
+    scraped_at = Column(String)
+
 engine = create_engine(DATABASE_URL, echo=False)
 Base.metadata.drop_all(engine)
 Base.metadata.create_all(engine)
@@ -149,6 +174,12 @@ def slugify(value):
     value = re.sub(r"[^a-z0-9]+", "-", value)
     value = re.sub(r"-+", "-", value)
     return value.strip("-")
+
+def official_slugify(value):
+    value = unicodedata.normalize("NFD", str(value or ""))
+    value = "".join(ch for ch in value if unicodedata.category(ch) != "Mn")
+    value = value.lower().strip()
+    return re.sub(r"\s+", "-", value)
 
 def normalize_token(raw):
     lowered = unicodedata.normalize("NFD", str(raw or ""))
@@ -598,6 +629,55 @@ def insert_records(records):
     session.close()
     return inserted
 
+def insert_committee_memberships():
+    if not os.path.exists(COMMITTEE_MEMBERSHIPS_PATH):
+        print(f"No committee memberships found at {COMMITTEE_MEMBERSHIPS_PATH}; skipping.")
+        return 0
+
+    with open(COMMITTEE_MEMBERSHIPS_PATH, "r", encoding="utf-8") as f:
+        payload = json.load(f)
+
+    session = Session()
+    committee_by_url = {}
+    for row in payload.get("committees", []):
+        committee = Committee(
+            name=row.get("name", ""),
+            url=row.get("url", ""),
+            membership_url=row.get("membership_url", ""),
+            house_no=str(row.get("house_no", "")),
+            source_url=payload.get("source_url", ""),
+            scraped_at=row.get("scraped_at") or payload.get("generated_at", ""),
+        )
+        session.add(committee)
+        session.flush()
+        committee_by_url[committee.url] = committee
+
+    inserted = 0
+    for row in payload.get("memberships", []):
+        committee = committee_by_url.get(row.get("committee_url", ""))
+        if not committee:
+            continue
+        member_name = row.get("member_name", "")
+        session.add(
+            CommitteeMembership(
+                committee_id=committee.id,
+                member_name=member_name,
+                member_slug=row.get("member_slug") or official_slugify(member_name),
+                member_uri=row.get("member_uri", ""),
+                member_url=row.get("member_url", ""),
+                role=row.get("role", ""),
+                constituency=row.get("constituency", ""),
+                email=row.get("email", ""),
+                phones=row.get("phones", ""),
+                scraped_at=row.get("scraped_at") or payload.get("generated_at", ""),
+            )
+        )
+        inserted += 1
+
+    session.commit()
+    session.close()
+    return inserted
+
 def run_pipeline():
     records = fetch_all_csv_records(DATA_FOLDER)
     if records:
@@ -605,6 +685,8 @@ def run_pipeline():
         print(f"Inserted {new_inserts} new records (out of {len(records)} parsed records).")
     else:
         print("No records found.")
+    committee_inserts = insert_committee_memberships()
+    print(f"Inserted {committee_inserts} committee membership rows.")
 
 if __name__ == "__main__":
     run_pipeline()
@@ -619,4 +701,6 @@ if __name__ == "__main__":
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_activity_lobbying_record_id ON lobbying_activity_entries(lobbying_record_id)"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_activity_record_activity ON lobbying_activity_entries(lobbying_record_id, activity)"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_lr_date_published ON lobbying_records(date_published)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_committee_memberships_member_slug ON committee_memberships(member_slug)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_committee_memberships_committee_id ON committee_memberships(committee_id)"))
     build_explore_precomputed()

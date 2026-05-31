@@ -6,6 +6,7 @@ import LobbyingCard from "../../components/LobbyingCard"
 import { useState, useEffect, useMemo } from "react"
 import { getServerBaseUrl } from "../../lib/serverBaseUrl"
 import { selectStyles } from "../../lib/selectStyles"
+import Link from "next/link"
 
 function formatDate(value) {
   if (!value) return "Unavailable"
@@ -279,6 +280,39 @@ export default function OfficialPage({ officialData }) {
                   <p className="text-sm text-muted-ui">No public bodies available.</p>
                 )}
               </div>
+            </div>
+
+            <div className="mt-4">
+              <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
+                <h3 className="text-sm font-semibold">Current Oireachtas Committee Memberships</h3>
+                {profile?.committee_memberships?.[0]?.scraped_at ? (
+                  <span className="text-xs text-muted-ui">
+                    Updated {formatDate(profile.committee_memberships[0].scraped_at)}
+                  </span>
+                ) : null}
+              </div>
+              {profile?.committee_memberships?.length ? (
+                <>
+                  <div className="flex flex-wrap gap-2">
+                    {profile.committee_memberships.map((committee) => (
+                      <Link
+                        key={`${committee.url}-${committee.role || "member"}`}
+                        href={`/committees/${committee.slug}`}
+                        className="text-xs md:text-sm px-2.5 py-1 rounded-full border border-[var(--ui-border)] bg-white/80 dark:bg-slate-900/35 hover:underline no-underline"
+                      >
+                        {committee.name}
+                        {committee.role ? ` - ${committee.role}` : ""}
+                      </Link>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-xs text-muted-ui">
+                    Current memberships may indicate policy relevance. They do not prove why a lobbying contact was
+                    made, and may not match membership at the time of older returns.
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-muted-ui">No current committee memberships matched for this official.</p>
+              )}
             </div>
           </section>
 
