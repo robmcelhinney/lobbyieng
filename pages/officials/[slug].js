@@ -320,9 +320,9 @@ export default function OfficialPage({ officialData }) {
           </section>
 
           {/* Filters Bar at Top */}
-          <div className="surface-card mb-6 flex flex-col sm:flex-row gap-6 items-end">
+          <div className="surface-card mb-6 flex flex-col sm:flex-row gap-6 items-start sm:items-end">
             {/* Lobbyist Filter */}
-            <div className="w-64 accent-blue-600 dark:accent-blue-400">
+            <div className="w-full sm:w-64 accent-blue-600 dark:accent-blue-400">
               <label className="block mb-1 text-sm font-semibold text-muted-ui">Lobbyist</label>
               <Select
                 options={lobbyistOptions}
@@ -335,7 +335,7 @@ export default function OfficialPage({ officialData }) {
             </div>
 
             {/* Year Filter */}
-            <div className="w-32">
+            <div className="w-full sm:w-32">
               <label className="block mb-1 text-sm font-semibold text-muted-ui">Year</label>
               <select
                 value={currentFilters.yearFilter || ""}
@@ -352,7 +352,7 @@ export default function OfficialPage({ officialData }) {
             </div>
 
             {/* Method Filter (multi-select, Grafana style: only update on close) */}
-            <div className="w-64 accent-blue-600 dark:accent-blue-400">
+            <div className="w-full sm:w-64 accent-blue-600 dark:accent-blue-400">
               <label className="block mb-1 text-sm font-semibold text-muted-ui">Method</label>
               <Select
                 options={methodOptions}
@@ -375,7 +375,7 @@ export default function OfficialPage({ officialData }) {
               />
             </div>
 
-            <div className="w-48">
+            <div className="w-full sm:w-48">
               <label className="block mb-1 text-sm font-semibold text-muted-ui">Official Scope</label>
               <select
                 value={currentFilters.officialScope || "all"}
@@ -390,7 +390,7 @@ export default function OfficialPage({ officialData }) {
               </select>
             </div>
 
-            <div className="w-56">
+            <div className="w-full sm:w-56">
               <label className="block mb-1 text-sm font-semibold text-muted-ui">Sort</label>
               <select
                 value={currentFilters.sort || "newest"}
