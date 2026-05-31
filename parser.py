@@ -653,11 +653,24 @@ def insert_committee_memberships():
         committee_by_url[committee.url] = committee
 
     inserted = 0
+    seen_memberships = set()
     for row in payload.get("memberships", []):
         committee = committee_by_url.get(row.get("committee_url", ""))
         if not committee:
             continue
         member_name = row.get("member_name", "")
+        member_key = (
+            committee.id,
+            row.get("member_slug") or official_slugify(member_name),
+            member_name,
+            row.get("role", ""),
+            row.get("member_uri", ""),
+            row.get("member_url", ""),
+            row.get("constituency", ""),
+        )
+        if member_key in seen_memberships:
+            continue
+        seen_memberships.add(member_key)
         session.add(
             CommitteeMembership(
                 committee_id=committee.id,

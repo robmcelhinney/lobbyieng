@@ -196,7 +196,20 @@ def fetch_committee_memberships(house_no):
             committee["name"] = page_committee_name
         committee["scraped_at"] = generated_at
 
+        seen_members = set()
         for member in members:
+            member_key = (
+                committee["url"],
+                member.get("member_slug", ""),
+                member.get("member_name", ""),
+                member.get("role", ""),
+                member.get("member_uri", ""),
+                member.get("member_url", ""),
+                member.get("constituency", ""),
+            )
+            if member_key in seen_members:
+                continue
+            seen_members.add(member_key)
             memberships.append(
                 {
                     **member,

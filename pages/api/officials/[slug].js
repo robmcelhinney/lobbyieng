@@ -53,7 +53,7 @@ export default async function handler(req, res) {
     const sortValue = Array.isArray(sort) ? sort[0] : sort
     const allowedSorts = new Set(["newest", "fewest-officials", "most-officials"])
     const activeSort = allowedSorts.has(sortValue) ? sortValue : "newest"
-    const cacheKey = buildCacheKey("official-detail", {
+    const cacheKey = buildCacheKey("official-detail-v2", {
       slug,
       page,
       lobbyist,
@@ -350,7 +350,7 @@ export default async function handler(req, res) {
     try {
       committeeMemberships = await db.all(
         `
-        SELECT
+        SELECT DISTINCT
           c.name,
           c.url,
           c.membership_url,

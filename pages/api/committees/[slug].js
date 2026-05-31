@@ -27,7 +27,7 @@ export default async function handler(req, res) {
 
     const membersRaw = await db.all(
       `
-      SELECT
+      SELECT DISTINCT
         cm.member_name,
         cm.member_slug,
         cm.member_uri,

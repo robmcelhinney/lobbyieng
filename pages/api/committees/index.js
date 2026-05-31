@@ -7,20 +7,31 @@ export default async function handler(req, res) {
     let rows = []
     try {
       rows = await db.all(`
+        WITH unique_members AS (
+          SELECT DISTINCT
+            c.id,
+            c.name,
+            c.url,
+            c.membership_url,
+            c.house_no,
+            c.scraped_at,
+            cm.member_uri
+          FROM committees c
+          LEFT JOIN committee_memberships cm ON cm.committee_id = c.id
+        )
         SELECT
-          c.id,
-          c.name,
-          c.url,
-          c.membership_url,
-          c.house_no,
-          c.scraped_at,
-          COUNT(cm.id) AS member_count,
-          SUM(CASE WHEN cm.member_uri LIKE '%.D.%' THEN 1 ELSE 0 END) AS dail_member_count,
-          SUM(CASE WHEN cm.member_uri LIKE '%.S.%' THEN 1 ELSE 0 END) AS seanad_member_count
-        FROM committees c
-        LEFT JOIN committee_memberships cm ON cm.committee_id = c.id
-        GROUP BY c.id
-        ORDER BY c.name ASC
+          id,
+          name,
+          url,
+          membership_url,
+          house_no,
+          scraped_at,
+          COUNT(member_uri) AS member_count,
+          SUM(CASE WHEN member_uri LIKE '%.D.%' THEN 1 ELSE 0 END) AS dail_member_count,
+          SUM(CASE WHEN member_uri LIKE '%.S.%' THEN 1 ELSE 0 END) AS seanad_member_count
+        FROM unique_members
+        GROUP BY id, name, url, membership_url, house_no, scraped_at
+        ORDER BY name ASC
       `)
     } catch (err) {
       if (!String(err?.message || "").includes("no such table")) throw err
