@@ -5,6 +5,17 @@ import Head from "next/head"
 import { getServerBaseUrl } from "../lib/serverBaseUrl"
 import { selectStyles } from "../lib/selectStyles"
 
+function normalizeOfficials(rows) {
+  return rows
+    .map((row) => ({
+      ...row,
+      returnCount: Number(row?.return_count ?? row?.returnCount ?? 0) || 0
+    }))
+    .filter((row) => row.name && row.slug)
+}
+
+const API_CACHE_BUSTER = "2"
+
 export async function getServerSideProps({ req }) {
   const baseUrl = getServerBaseUrl(req)
   let latestPeriod = null
@@ -21,9 +32,9 @@ export async function getServerSideProps({ req }) {
   try {
     // Always use latestPeriod for initial fetch, never 'All'
     const periodParam = latestPeriod ? `period=${encodeURIComponent(latestPeriod)}` : ""
-    const res = await fetch(`${baseUrl}/api/officials?${periodParam}`)
+    const res = await fetch(`${baseUrl}/api/officials?${periodParam}&v=${API_CACHE_BUSTER}`)
     if (!res.ok) throw new Error("API failed")
-    const officials = await res.json()
+    const officials = normalizeOfficials(await res.json())
     return { props: { officials } }
   } catch (err) {
     console.error("Error fetching officials:", err)
@@ -35,7 +46,8 @@ export default function OfficialsPage({ officials: initialOfficials }) {
   const [selectedTitles, setSelectedTitles] = useState([])
   const [allPeriods, setAllPeriods] = useState([])
   const [selectedPeriod, setSelectedPeriod] = useState("")
-  const [officials, setOfficials] = useState(initialOfficials)
+  const [sortBy, setSortBy] = useState("name")
+  const [officials, setOfficials] = useState(normalizeOfficials(initialOfficials))
   const [selectedName, setSelectedName] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -53,11 +65,11 @@ export default function OfficialsPage({ officials: initialOfficials }) {
   useEffect(() => {
     setIsLoading(true)
     const url = selectedPeriod
-      ? `/api/officials?period=${encodeURIComponent(selectedPeriod)}`
-      : `/api/officials?period=All`
+      ? `/api/officials?period=${encodeURIComponent(selectedPeriod)}&v=${API_CACHE_BUSTER}`
+      : `/api/officials?period=All&v=${API_CACHE_BUSTER}`
     fetch(url)
       .then((res) => res.json())
-      .then(setOfficials)
+      .then((data) => setOfficials(normalizeOfficials(data)))
       .finally(() => setIsLoading(false))
   }, [selectedPeriod])
 
@@ -81,7 +93,23 @@ export default function OfficialsPage({ officials: initialOfficials }) {
   })
 
   const deduped = Array.from(new Map(filtered.map((o) => [o.slug, o])).values())
-  const nameOptions = deduped.map((o) => ({ value: o.name, label: o.name }))
+  const sortOptions = [
+    { value: "name", label: "Name" },
+    { value: "returns-desc", label: "Most returns" },
+    { value: "returns-asc", label: "Fewest returns" }
+  ]
+  const nameOptions = [...deduped].sort((a, b) => a.name.localeCompare(b.name)).map((o) => ({ value: o.name, label: o.name }))
+  const sortedDeduped = [...deduped].sort((a, b) => {
+    if (sortBy === "returns-desc") {
+      if (b.returnCount !== a.returnCount) return b.returnCount - a.returnCount
+      return a.name.localeCompare(b.name)
+    }
+    if (sortBy === "returns-asc") {
+      if (a.returnCount !== b.returnCount) return a.returnCount - b.returnCount
+      return a.name.localeCompare(b.name)
+    }
+    return a.name.localeCompare(b.name)
+  })
 
   return (
     <>
@@ -145,15 +173,30 @@ export default function OfficialsPage({ officials: initialOfficials }) {
                   styles={selectStyles}
                 />
               </div>
+              {/* Sort */}
+              <div className="w-40">
+                <label className="block mb-1 text-sm font-semibold text-muted-ui">Sort by</label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="native-select w-full px-4 py-2 border border-[var(--ui-border)] rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {sortOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
           <div className="surface-card">
-            <h2 className="text-2xl font-semibold mb-4">Officials ({isLoading ? "..." : deduped.length} results)</h2>
+            <h2 className="text-2xl font-semibold mb-4">Officials ({isLoading ? "..." : sortedDeduped.length} results)</h2>
             {isLoading ? (
               <div className="text-center text-blue-600 py-8">Loading officials...</div>
-            ) : deduped.length > 0 ? (
+            ) : sortedDeduped.length > 0 ? (
               <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {deduped.map((official) => (
+                {sortedDeduped.map((official) => (
                   <li key={official.slug}>
                     <Link
                       href={`/officials/${official.slug}`}
@@ -161,6 +204,9 @@ export default function OfficialsPage({ officials: initialOfficials }) {
                     >
                       <h3 className="font-bold">{official.name}</h3>
                       <p className="text-sm text-muted-ui mt-1">{official.job_title}</p>
+                      <p className="mt-2 text-sm text-muted-ui">
+                        {official.returnCount} return{official.returnCount === 1 ? "" : "s"}
+                      </p>
                     </Link>
                   </li>
                 ))}

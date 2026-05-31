@@ -9,6 +9,15 @@ function slugify(name) {
     .replace(/\s+/g, "-")
 }
 
+function normalizeNameKey(name) {
+  return String(name || "")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/\s+/g, " ")
+    .toLowerCase()
+    .trim()
+}
+
 export default async function handler(req, res) {
   try {
     const db = await getDb()
@@ -25,107 +34,124 @@ export default async function handler(req, res) {
     }
     let rows
     if (period && period !== "All") {
-      // Filter by period and job_title
       rows = await db.all(
         `
-                SELECT person_name, job_title, lr.period
-                FROM dpo_entries dpo
-                JOIN lobbying_records lr ON dpo.lobbying_record_id = lr.id
-                WHERE person_name IS NOT NULL AND TRIM(person_name) != ''
-                  AND lr.period = ?
-                  ${jobTitleCondition}
-            `,
+          SELECT
+            person_name,
+            job_title,
+            lr.period,
+            dpo.lobbying_record_id
+          FROM dpo_entries dpo
+          JOIN lobbying_records lr ON dpo.lobbying_record_id = lr.id
+          WHERE person_name IS NOT NULL AND TRIM(person_name) != ''
+            AND lr.period = ?
+            ${jobTitleCondition}
+        `,
         [period, ...(allowedJobTitles || [])]
       )
     } else {
-      // Get most recent period/job_title per person_name using SQL (fixed with CTE)
       rows = await db.all(
         `
-                WITH ranked AS (
-                  SELECT
-                    dpo.person_name,
-                    dpo.job_title,
-                    lr.period,
-                    CAST(substr(lr.period, 8, 4) AS INTEGER) AS year,
-                    CASE substr(lr.period, 4, 3)
-                      WHEN 'Jan' THEN 1
-                      WHEN 'Feb' THEN 2
-                      WHEN 'Mar' THEN 3
-                      WHEN 'Apr' THEN 4
-                      WHEN 'May' THEN 5
-                      WHEN 'Jun' THEN 6
-                      WHEN 'Jul' THEN 7
-                      WHEN 'Aug' THEN 8
-                      WHEN 'Sep' THEN 9
-                      WHEN 'Oct' THEN 10
-                      WHEN 'Nov' THEN 11
-                      WHEN 'Dec' THEN 12
-                      ELSE 0
-                    END AS month,
-                    ROW_NUMBER() OVER (
-                      PARTITION BY dpo.person_name
-                      ORDER BY CAST(substr(lr.period, 8, 4) AS INTEGER) DESC,
-                               CASE substr(lr.period, 4, 3)
-                                 WHEN 'Jan' THEN 1
-                                 WHEN 'Feb' THEN 2
-                                 WHEN 'Mar' THEN 3
-                                 WHEN 'Apr' THEN 4
-                                 WHEN 'May' THEN 5
-                                 WHEN 'Jun' THEN 6
-                                 WHEN 'Jul' THEN 7
-                                 WHEN 'Aug' THEN 8
-                                 WHEN 'Sep' THEN 9
-                                 WHEN 'Oct' THEN 10
-                                 WHEN 'Nov' THEN 11
-                                 WHEN 'Dec' THEN 12
-                                 ELSE 0
-                               END DESC
-                    ) AS rn
-                  FROM dpo_entries dpo
-                  JOIN lobbying_records lr ON dpo.lobbying_record_id = lr.id
-                  WHERE dpo.person_name IS NOT NULL AND TRIM(dpo.person_name) != ''
-                  ${jobTitleCondition}
-                )
-                SELECT person_name, job_title, period
-                FROM ranked
-                WHERE rn = 1
-            `,
+          WITH ranked AS (
+            SELECT
+              dpo.person_name,
+              dpo.job_title,
+              lr.period,
+              dpo.lobbying_record_id,
+              CAST(substr(lr.period, 8, 4) AS INTEGER) AS year,
+              CASE substr(lr.period, 4, 3)
+                WHEN 'Jan' THEN 1
+                WHEN 'Feb' THEN 2
+                WHEN 'Mar' THEN 3
+                WHEN 'Apr' THEN 4
+                WHEN 'May' THEN 5
+                WHEN 'Jun' THEN 6
+                WHEN 'Jul' THEN 7
+                WHEN 'Aug' THEN 8
+                WHEN 'Sep' THEN 9
+                WHEN 'Oct' THEN 10
+                WHEN 'Nov' THEN 11
+                WHEN 'Dec' THEN 12
+                ELSE 0
+              END AS month,
+              ROW_NUMBER() OVER (
+                PARTITION BY dpo.person_name
+                ORDER BY CAST(substr(lr.period, 8, 4) AS INTEGER) DESC,
+                         CASE substr(lr.period, 4, 3)
+                           WHEN 'Jan' THEN 1
+                           WHEN 'Feb' THEN 2
+                           WHEN 'Mar' THEN 3
+                           WHEN 'Apr' THEN 4
+                           WHEN 'May' THEN 5
+                           WHEN 'Jun' THEN 6
+                           WHEN 'Jul' THEN 7
+                           WHEN 'Aug' THEN 8
+                           WHEN 'Sep' THEN 9
+                           WHEN 'Oct' THEN 10
+                           WHEN 'Nov' THEN 11
+                           WHEN 'Dec' THEN 12
+                           ELSE 0
+                         END DESC
+              ) AS rn
+            FROM dpo_entries dpo
+            JOIN lobbying_records lr ON dpo.lobbying_record_id = lr.id
+            WHERE dpo.person_name IS NOT NULL AND TRIM(dpo.person_name) != ''
+            ${jobTitleCondition}
+          )
+          SELECT person_name, job_title, period, lobbying_record_id
+          FROM ranked
+          WHERE rn = 1
+        `,
         allowedJobTitles || []
       )
     }
 
+    const countRows = await db.all(
+      `
+        SELECT dpo.person_name, dpo.lobbying_record_id
+        FROM dpo_entries dpo
+        JOIN lobbying_records lr ON dpo.lobbying_record_id = lr.id
+        WHERE dpo.person_name IS NOT NULL AND TRIM(dpo.person_name) != ''
+          ${period && period !== "All" ? "AND lr.period = ?" : ""}
+          ${jobTitleCondition}
+      `,
+      period && period !== "All" ? [period, ...(allowedJobTitles || [])] : allowedJobTitles || []
+    )
+
+    const countMap = new Map()
+    for (const row of countRows) {
+      const key = normalizeNameKey(row.person_name)
+      if (!countMap.has(key)) countMap.set(key, new Set())
+      countMap.get(key).add(row.lobbying_record_id)
+    }
+
     const nameMap = new Map()
     for (const row of rows) {
-      const ascii = row.person_name
-        .normalize("NFD")
-        .replace(/\p{Diacritic}/gu, "")
-        .toLowerCase()
+      const ascii = normalizeNameKey(row.person_name)
       if (!nameMap.has(ascii)) nameMap.set(ascii, [])
       nameMap.get(ascii).push({
         name: row.person_name,
         job_title: row.job_title,
-        period: row.period
+        period: row.period,
+        return_count: countMap.get(ascii)?.size || 0
       })
     }
 
     let officials
     if (period && period !== "All") {
-      // For a specific period, return all officials for that period
       officials = Array.from(nameMap.values()).map((variants) => {
-        const v = variants[0]
+        const v = variants.slice().sort((a, b) => a.name.localeCompare(b.name))[0]
         return {
           name: v.name,
           slug: slugify(v.name),
           job_title: v.job_title,
-          periods: [v.period]
+          periods: [v.period],
+          return_count: v.return_count
         }
       })
     } else {
-      // For 'All', return one entry per person with most recent period/job_title
       officials = Array.from(nameMap.values()).map((variants) => {
-        // Choose the record with the latest period (sort by year/month)
         const best = variants.reduce((acc, cur) => {
-          // Extract year and month from period string
           const extract = (p) => {
             const m = p.period.match(/(\d{1,2}) (\w+), (\d{4})/)
             if (!m) return { year: 0, month: 0 }
@@ -144,7 +170,8 @@ export default async function handler(req, res) {
           name: best.name,
           slug: slugify(best.name),
           job_title: best.job_title,
-          periods: Array.from(new Set(variants.map((v) => v.period).filter(Boolean)))
+          periods: Array.from(new Set(variants.map((v) => v.period).filter(Boolean))),
+          return_count: best.return_count
         }
       })
     }

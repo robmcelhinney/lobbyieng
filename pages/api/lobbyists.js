@@ -6,22 +6,41 @@ export default async function handler(req, res) {
     const { period } = req.query
     let rows
     if (period && period !== "All") {
-      // Filter by period
       rows = await db.all(
-        `SELECT DISTINCT lobbyist_name FROM lobbying_records WHERE lobbyist_name IS NOT NULL AND TRIM(lobbyist_name) != '' AND period = ?`,
+        `
+        SELECT
+          MIN(TRIM(lobbyist_name)) AS name,
+          COUNT(DISTINCT id) AS return_count
+        FROM lobbying_records
+        WHERE lobbyist_name IS NOT NULL
+          AND TRIM(lobbyist_name) != ''
+          AND period = ?
+        GROUP BY LOWER(TRIM(lobbyist_name))
+        `,
         [period]
       )
     } else {
-      // All periods
       rows = await db.all(
-        `SELECT DISTINCT lobbyist_name FROM lobbying_records WHERE lobbyist_name IS NOT NULL AND TRIM(lobbyist_name) != ''`
+        `
+        SELECT
+          MIN(TRIM(lobbyist_name)) AS name,
+          COUNT(DISTINCT id) AS return_count
+        FROM lobbying_records
+        WHERE lobbyist_name IS NOT NULL
+          AND TRIM(lobbyist_name) != ''
+        GROUP BY LOWER(TRIM(lobbyist_name))
+        `
       )
     }
-    // Map to array of names only
+
     const lobbyists = rows
-      .map((row) => row.lobbyist_name)
-      .filter((name) => name)
-      .sort((a, b) => a.localeCompare(b))
+      .map((row) => ({
+        name: row.name,
+        returnCount: Number(row.return_count) || 0
+      }))
+      .filter((row) => row.name)
+      .sort((a, b) => a.name.localeCompare(b.name))
+
     res.setHeader("Cache-Control", "public, max-age=3600, stale-while-revalidate=60")
     res.status(200).json(lobbyists)
   } catch (err) {

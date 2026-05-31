@@ -15,6 +15,25 @@ function slugify(name) {
     .toLowerCase()
 }
 
+function normalizeLobbyists(rows) {
+  return rows
+    .map((row) => {
+      if (typeof row === "string") {
+        return { name: row, slug: slugify(row), returnCount: 0 }
+      }
+
+      const name = row?.name || row?.lobbyist_name || ""
+      return {
+        name,
+        slug: slugify(name),
+        returnCount: Number(row?.returnCount ?? row?.return_count ?? 0) || 0
+      }
+    })
+    .filter((row) => row.name)
+}
+
+const API_CACHE_BUSTER = "2"
+
 export async function getServerSideProps({ req }) {
   const baseUrl = getServerBaseUrl(req)
   try {
@@ -43,9 +62,11 @@ export async function getServerSideProps({ req }) {
     const latestJson = latestRes.ok ? await latestRes.json() : {}
     const latestPeriod = latestJson.period || (allPeriods.length > 0 ? allPeriods[allPeriods.length - 1] : "")
     // Fetch lobbyists for latest period
-    const lobbyistsRes = await fetch(`${baseUrl}/api/lobbyists?period=${encodeURIComponent(latestPeriod)}`)
-    const names = lobbyistsRes.ok ? await lobbyistsRes.json() : []
-    const lobbyists = names.map((name) => ({ name, slug: slugify(name) }))
+    const lobbyistsRes = await fetch(
+      `${baseUrl}/api/lobbyists?period=${encodeURIComponent(latestPeriod)}&v=${API_CACHE_BUSTER}`
+    )
+    const rows = lobbyistsRes.ok ? await lobbyistsRes.json() : []
+    const lobbyists = normalizeLobbyists(rows)
     return {
       props: {
         lobbyists,
@@ -63,6 +84,7 @@ export default function LobbyistsPage({ lobbyists: initialLobbyists, allPeriods,
   const [selectedName, setSelectedName] = useState(null)
   const [selectedPeriod, setSelectedPeriod] = useState(latestPeriod)
   const [lobbyists, setLobbyists] = useState(initialLobbyists)
+  const [sortBy, setSortBy] = useState("name")
   const [isLoading, setIsLoading] = useState(false)
   // Update lobbyists when period changes
   useEffect(() => {
@@ -70,21 +92,37 @@ export default function LobbyistsPage({ lobbyists: initialLobbyists, allPeriods,
       setIsLoading(true)
       const url =
         selectedPeriod && selectedPeriod !== "All"
-        ? `/api/lobbyists?period=${encodeURIComponent(selectedPeriod)}`
-        : `/api/lobbyists?period=All`
+        ? `/api/lobbyists?period=${encodeURIComponent(selectedPeriod)}&v=${API_CACHE_BUSTER}`
+        : `/api/lobbyists?period=All&v=${API_CACHE_BUSTER}`
       const res = await fetch(url)
-      const names = res.ok ? await res.json() : []
-      setLobbyists(names.map((name) => ({ name, slug: slugify(name) })))
-      setSelectedName(null); // Reset name filter on period change
+      const rows = res.ok ? await res.json() : []
+      setLobbyists(normalizeLobbyists(rows))
+      setSelectedName(null)
       setIsLoading(false)
     }
 
     fetchLobbyists()
   }, [selectedPeriod])
-  // Filtered list
+  const sortOptions = [
+    { value: "name", label: "Name" },
+    { value: "returns-desc", label: "Most returns" },
+    { value: "returns-asc", label: "Fewest returns" }
+  ]
+  const nameOptions = [...lobbyists]
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((l) => ({ value: l.name, label: l.name }))
   const filtered = selectedName ? lobbyists.filter((l) => l.name === selectedName.value) : lobbyists
-  // react-select options
-  const nameOptions = lobbyists.map((l) => ({ value: l.name, label: l.name }))
+  const sortedFiltered = [...filtered].sort((a, b) => {
+    if (sortBy === "returns-desc") {
+      if (b.returnCount !== a.returnCount) return b.returnCount - a.returnCount
+      return a.name.localeCompare(b.name)
+    }
+    if (sortBy === "returns-asc") {
+      if (a.returnCount !== b.returnCount) return a.returnCount - b.returnCount
+      return a.name.localeCompare(b.name)
+    }
+    return a.name.localeCompare(b.name)
+  })
   return (
     <>
       <Head>
@@ -132,6 +170,20 @@ export default function LobbyistsPage({ lobbyists: initialLobbyists, allPeriods,
                 styles={selectStyles}
               />
             </div>
+            <div className="w-40">
+              <label className="block text-sm font-semibold text-muted-ui mb-1">Sort by</label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="native-select w-full border border-[var(--ui-border)] rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {sortOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
             {(selectedName || selectedPeriod !== latestPeriod) && (
               <div>
                 <button
@@ -147,18 +199,21 @@ export default function LobbyistsPage({ lobbyists: initialLobbyists, allPeriods,
             )}
           </div>
           <section className="surface-card">
-            <h2 className="text-2xl font-semibold mb-4">Lobbyists ({isLoading ? "..." : filtered.length} results)</h2>
+            <h2 className="text-2xl font-semibold mb-4">Lobbyists ({isLoading ? "..." : sortedFiltered.length} results)</h2>
             {isLoading ? (
               <div className="text-center text-blue-600 py-8">Loading lobbyists...</div>
-            ) : filtered.length > 0 ? (
+            ) : sortedFiltered.length > 0 ? (
               <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {filtered.map((lobbyist) => (
+                {sortedFiltered.map((lobbyist) => (
                   <li key={lobbyist.slug}>
                     <Link
                       href={`/lobbyists/${lobbyist.slug}`}
                       className="surface-card card-interactive no-underline block min-h-[108px]"
                     >
                       <h3 className="font-bold">{lobbyist.name}</h3>
+                      <p className="mt-2 text-sm text-muted-ui">
+                        {lobbyist.returnCount} return{lobbyist.returnCount === 1 ? "" : "s"}
+                      </p>
                     </Link>
                   </li>
                 ))}
