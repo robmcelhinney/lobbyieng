@@ -3,6 +3,7 @@ import ChordDiagram from "../components/ChordDiagram"
 import { useEffect, useRef, useState } from "react"
 import Select from "react-select"
 import { useRouter } from "next/router"
+import { Share2 } from "lucide-react"
 
 export default function ChordPage() {
   const router = useRouter()
@@ -207,9 +208,11 @@ export default function ChordPage() {
             <button
               type="button"
               onClick={copyPermalink}
-              className="inline-block mt-3 px-4 py-2 rounded-md border border-white/60 text-white hover:bg-white/10 transition font-semibold text-sm"
+              aria-label="Share this view"
+              className="inline-flex items-center gap-2 mt-3 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-sm backdrop-blur transition hover:bg-white/15 hover:border-white/30"
             >
-              Copy link to this view
+              <Share2 className="h-4 w-4" aria-hidden="true" />
+              Share
             </button>
             {copyStatus ? <p className="text-xs mt-2 text-blue-100">{copyStatus}</p> : null}
           </div>
