@@ -1,5 +1,5 @@
 # Use an official Node.js runtime as a parent image (Debian-based for easy Python install)
-FROM node:20-slim
+FROM node:24-slim
 
 # Install Python 3, pip, and SQLite3
 RUN apt-get update && apt-get install -y \
