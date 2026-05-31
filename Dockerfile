@@ -3,6 +3,7 @@ FROM node:20-slim
 
 # Install Python 3, pip, and SQLite3
 RUN apt-get update && apt-get install -y \
+    build-essential \
     python3 \
     python3-pip \
     sqlite3 \
@@ -23,6 +24,7 @@ RUN python3 parser.py
 # Install Node.js dependencies
 COPY package*.json ./
 RUN npm install
+RUN npm rebuild sqlite3 --build-from-source
 
 # Copy the rest of the application code
 COPY . .

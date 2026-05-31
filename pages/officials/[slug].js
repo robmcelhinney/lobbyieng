@@ -1,5 +1,6 @@
 import { useRouter } from "next/router"
 import Head from "next/head"
+import Image from "next/image"
 import Select from "react-select"
 import LobbyingCard from "../../components/LobbyingCard"
 import { useState, useEffect, useMemo } from "react"
@@ -54,12 +55,13 @@ function PoliticianImage({ slug, name }) {
   if (!slug) return null
   const imagePath = `/images/td_thumbnails/${slug}.jpg`
   return imgExists ? (
-    <img
+    <Image
       src={imagePath}
       alt={name}
-      className="mx-auto mb-4 rounded shadow max-h-56 w-auto h-auto"
+      width={224}
+      height={224}
+      className="mx-auto mb-4 rounded shadow max-h-56 w-auto h-auto object-contain"
       onError={() => setImgExists(false)}
-      loading="lazy"
     />
   ) : null
 }
