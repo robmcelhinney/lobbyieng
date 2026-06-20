@@ -99,7 +99,7 @@ make build-db
 TD thumbnail images are committed in `public/images/td_thumbnails/`. To refresh them:
 
 ```bash
-python download-dail-images.py
+uv run python download-dail-images.py
 ```
 
 ### 🏛️ Fetch Current Committee Memberships (optional)
