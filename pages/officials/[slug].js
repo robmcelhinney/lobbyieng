@@ -49,13 +49,13 @@ export async function getServerSideProps({ params, query, req }) {
 }
 
 // Politician image component to handle image existence check
-function PoliticianImage({ slug, name }) {
+function PoliticianImage({ slug, name, directory = "td_thumbnails" }) {
   const [imgExists, setImgExists] = useState(true)
   useEffect(() => {
     setImgExists(true)
-  }, [slug])
+  }, [directory, slug])
   if (!slug) return null
-  const imagePath = `/images/td_thumbnails/${slug}.jpg`
+  const imagePath = `/images/${directory}/${slug}.jpg`
   return imgExists ? (
     <Image
       src={imagePath}
@@ -190,7 +190,11 @@ export default function OfficialPage({ officialData }) {
         <header className="hero-shell">
           <div className="max-w-7xl mx-auto px-4 py-8 text-center">
             {/* Politician Image if available */}
-            <PoliticianImage slug={slug} name={name} />
+            <PoliticianImage
+              slug={slug}
+              name={name}
+              directory={profile?.most_recent_title === "Senator" ? "senator_thumbnails" : "td_thumbnails"}
+            />
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight">{name}</h1>
             <p className="hero-subtitle mt-2">
               Total lobbying returns involving this official: <span className="font-semibold">{total}</span>
