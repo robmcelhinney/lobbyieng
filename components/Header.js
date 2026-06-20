@@ -12,6 +12,7 @@ export default function Header() {
 
   const navItems = [
     { href: "/dail", label: "Find a TD" },
+    { href: "/senators", label: "Find a Senator" },
     { href: "/officials", label: "All Officials" },
     { href: "/lobbyists", label: "Find a Lobbyist" },
     { href: "/committees", label: "Committees" },

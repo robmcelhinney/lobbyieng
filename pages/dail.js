@@ -5,7 +5,7 @@ import Head from "next/head"
 import { getServerBaseUrl } from "../lib/serverBaseUrl"
 import { selectStyles } from "../lib/selectStyles"
 
-const topOfficialsTitles = [
+const dailOfficialTitles = [
   "TD",
   "An Tánaiste",
   "An Taoiseach",
@@ -13,6 +13,8 @@ const topOfficialsTitles = [
   "Minister of State",
   "Tánaiste and Minister"
 ]
+
+export const senatorOfficialTitles = ["Senator"]
 
 function normalizeOfficials(rows) {
   return rows
@@ -25,7 +27,7 @@ function normalizeOfficials(rows) {
 
 const API_CACHE_BUSTER = "2"
 
-export async function getServerSideProps(context) {
+export async function getOfficialsPageProps(context, officialTitles = dailOfficialTitles) {
   const baseUrl = getServerBaseUrl(context.req)
   try {
     const periodsRes = await fetch(`${baseUrl}/api/periods`)
@@ -36,7 +38,7 @@ export async function getServerSideProps(context) {
     const latestJson = latestRes.ok ? await latestRes.json() : {}
     const latestPeriod = latestJson.period || allPeriods.at(-1) || ""
 
-    const jobTitlesParam = topOfficialsTitles.join(",")
+    const jobTitlesParam = officialTitles.join(",")
     const res = await fetch(
       `${baseUrl}/api/officials?period=${encodeURIComponent(
         latestPeriod
@@ -51,11 +53,23 @@ export async function getServerSideProps(context) {
   }
 }
 
+export async function getServerSideProps(context) {
+  return getOfficialsPageProps(context)
+}
+
 function dedupedOfficials(array) {
   return Array.from(new Map(array.map((item) => [item.slug, item])).values())
 }
 
-export default function Index({ officials: initialOfficials, allPeriods, latestPeriod }) {
+export default function Index({ officials: initialOfficials, allPeriods, latestPeriod, directory = "dail" }) {
+  const isSenatorsDirectory = directory === "senators"
+  const officialTitles = isSenatorsDirectory ? senatorOfficialTitles : dailOfficialTitles
+  const pageTitle = isSenatorsDirectory ? "Senators" : "Dáil"
+  const heading = isSenatorsDirectory ? "Find a Senator" : "Find a TD"
+  const description = isSenatorsDirectory
+    ? "Search and explore Irish Senators and lobbying activity. Filter by period and name."
+    : "Search and explore Irish Dáil members and lobbying activity. Filter by period, name, and job title."
+  const canonicalPath = isSenatorsDirectory ? "/senators" : "/dail"
   const [selectedPeriod, setSelectedPeriod] = useState(latestPeriod)
   const [selectedName, setSelectedName] = useState(null)
   const [sortBy, setSortBy] = useState("name")
@@ -64,7 +78,7 @@ export default function Index({ officials: initialOfficials, allPeriods, latestP
 
   useEffect(() => {
     setIsLoading(true)
-    const jobTitlesParam = topOfficialsTitles.join(",")
+    const jobTitlesParam = officialTitles.join(",")
     const url = selectedPeriod
       ? `/api/officials?period=${encodeURIComponent(selectedPeriod)}&job_titles=${encodeURIComponent(jobTitlesParam)}&v=${API_CACHE_BUSTER}`
       : `/api/officials?period=All&job_titles=${encodeURIComponent(jobTitlesParam)}&v=${API_CACHE_BUSTER}`
@@ -72,7 +86,7 @@ export default function Index({ officials: initialOfficials, allPeriods, latestP
       .then((res) => res.json())
       .then((data) => setOfficials(normalizeOfficials(data)))
       .finally(() => setIsLoading(false))
-  }, [selectedPeriod])
+  }, [officialTitles, selectedPeriod])
 
   const filtered = officials.filter((o) => {
     return selectedName ? o.name === selectedName.value : true
@@ -99,24 +113,24 @@ export default function Index({ officials: initialOfficials, allPeriods, latestP
   return (
     <>
       <Head>
-        <title>Lobbyieng - Dáil</title>
+        <title>Lobbyieng - {pageTitle}</title>
         <meta
           name="description"
-          content="Search and explore Irish Dáil members and lobbying activity. Filter by period, name, and job title."
+          content={description}
         />
-        <meta property="og:title" content="Lobbyieng - Dáil" />
+        <meta property="og:title" content={`Lobbyieng - ${pageTitle}`} />
         <meta
           property="og:description"
-          content="Search and explore Irish Dáil members and lobbying activity. Filter by period, name, and job title."
+          content={description}
         />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://lobbyieng.com/dail" />
+        <meta property="og:url" content={`https://lobbyieng.com${canonicalPath}`} />
         <meta property="og:image" content="/android-chrome-512x512.png" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Lobbyieng - Dáil" />
+        <meta name="twitter:title" content={`Lobbyieng - ${pageTitle}`} />
         <meta
           name="twitter:description"
-          content="Search and explore Irish Dáil members and lobbying activity. Filter by period, name, and job title."
+          content={description}
         />
         <meta name="twitter:image" content="/android-chrome-512x512.png" />
       </Head>
@@ -129,7 +143,7 @@ export default function Index({ officials: initialOfficials, allPeriods, latestP
 
         <header className="hero-shell">
           <div className="max-w-7xl mx-auto px-4 py-8">
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight">Find a TD</h1>
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight">{heading}</h1>
             <p className="hero-subtitle mt-2">Search elected officials and inspect their recent lobbying activity.</p>
           </div>
         </header>
