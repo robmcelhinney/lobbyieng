@@ -38,13 +38,72 @@ NAME_CANONICALIZATION = {
         "Aengus O Snoidigh",
         "aengus o'snodaigh"
     ],
+    "Anne Rabbitte": [
+        "Anne Rabbitte",
+        "Anne Rabitte"
+    ],
+    "Charles Flanagan": [
+        "Charles Flanagan",
+        "Charlie Flanagan TD",
+    ],
+    "Darragh O'Brien": [
+        "Daragh O Brien",
+        "Darragh O'Brien",
+        "Darragh O Brien",
+        "Darragh O' Brien",
+        "Darragh O'Brian"
+    ],
+    "Denis Naughten": [
+        "Denis Naughten",
+        "Denis Naughton"
+    ],
+    "Eamon Ryan": [
+        "Eamon Ryan",
+        "Eamonn Ryan"
+    ],
+    "Hildegarde Naughton": [
+        "Hildegarde Naughton",
+        "Hilegarde Naughton"
+    ],
+    "Matt Carthy": [
+        "Matt Carthy",
+        "Matt Carty"
+    ],
     "Micheál Martin": [
         "Micheál Martin",
         "Michael Martin"
     ],
+    "Ossian Smyth": [
+        "Ossian Smyth",
+        "Ossian Smith"
+    ],
+    "Paschal Donohoe": [
+        "Paschal Donohoe",
+        "Paschal Donoghue"
+    ],
+    "Pat Buckley": [
+        "Pat Buckley",
+        "Pat Buckey"
+    ],
+    "Roderic O'Gorman": [
+        "Roderic O'Gorman",
+        "Roderick O'Gorman"
+    ],
+    "Róisín Shortall": [
+        "Róisín Shortall",
+        "Róisín Shorthall"
+    ],
     "Ross Elwood": [
         "?Ross Elwood",
         "Ross Elwood",
+    ],
+    "Ruairí Ó Murchú": [
+        "Ruairí Ó Murchú",
+        "Ruairi O'Mhurchu"
+    ],
+    "Steven Matthews": [
+        "Steven Matthews",
+        "Stephen Matthews"
     ],
     "Lucinda Creighton": [   
         "Lucinda Creighton (Please note that Lucinda Creighton was not a DPO during the return period 1 May - 31 Aug 2016)",
