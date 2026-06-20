@@ -82,8 +82,11 @@ NAME_CANONICALIZATION = {
         "Ossian Smith"
     ],
     "Paschal Donohoe": [
+        "Pascal Dohoghue",
+        "Pascal Donohoe",
         "Paschal Donohoe",
-        "Paschal Donoghue"
+        "Paschal Donoghue",
+        "Paschal Donohue"
     ],
     "Pat Buckley": [
         "Pat Buckley",
