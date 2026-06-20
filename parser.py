@@ -33,6 +33,10 @@ BANNED_NAMES = [
 
 # Add a mapping of canonical names to their variants
 NAME_CANONICALIZATION = {
+    "Aidan Farrelly": [
+        "Aidan Farrelly",
+        "Aiden Farrelly",
+    ],
     "Aengus Ó Snodaigh": [
         "Aengus Ó Snodaigh",
         "Aengus O Snoidigh",
