@@ -3,35 +3,29 @@ import { getDb } from "../../lib/sqlite"
 export default async function handler(req, res) {
   try {
     const db = await getDb()
-    const { period } = req.query
+    const { period, year } = req.query
+    const hasYearFilter = typeof year === "string" && /^\d{4}$/.test(year)
+    const hasPeriodFilter = !hasYearFilter && period && period !== "All"
+    const timeCondition = hasYearFilter
+      ? "AND substr(TRIM(period), -4) = ?"
+      : hasPeriodFilter
+        ? "AND period = ?"
+        : ""
+    const timeParams = hasYearFilter ? [year] : hasPeriodFilter ? [period] : []
     let rows
-    if (period && period !== "All") {
-      rows = await db.all(
-        `
-        SELECT
-          MIN(TRIM(lobbyist_name)) AS name,
-          COUNT(DISTINCT id) AS return_count
-        FROM lobbying_records
-        WHERE lobbyist_name IS NOT NULL
-          AND TRIM(lobbyist_name) != ''
-          AND period = ?
-        GROUP BY LOWER(TRIM(lobbyist_name))
-        `,
-        [period]
-      )
-    } else {
-      rows = await db.all(
-        `
-        SELECT
-          MIN(TRIM(lobbyist_name)) AS name,
-          COUNT(DISTINCT id) AS return_count
-        FROM lobbying_records
-        WHERE lobbyist_name IS NOT NULL
-          AND TRIM(lobbyist_name) != ''
-        GROUP BY LOWER(TRIM(lobbyist_name))
-        `
-      )
-    }
+    rows = await db.all(
+      `
+      SELECT
+        MIN(TRIM(lobbyist_name)) AS name,
+        COUNT(DISTINCT id) AS return_count
+      FROM lobbying_records
+      WHERE lobbyist_name IS NOT NULL
+        AND TRIM(lobbyist_name) != ''
+        ${timeCondition}
+      GROUP BY LOWER(TRIM(lobbyist_name))
+      `,
+      timeParams
+    )
 
     const lobbyists = rows
       .map((row) => ({

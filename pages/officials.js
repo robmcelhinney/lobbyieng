@@ -14,64 +14,43 @@ function normalizeOfficials(rows) {
     .filter((row) => row.name && row.slug)
 }
 
-const API_CACHE_BUSTER = "2"
+const API_CACHE_BUSTER = "3"
 
 export async function getServerSideProps({ req }) {
   const baseUrl = getServerBaseUrl(req)
-  let latestPeriod = null
   try {
-    const res = await fetch(`${baseUrl}/api/periods-latest`)
-    if (!res.ok) throw new Error("Failed to fetch latest period")
-    const { period } = await res.json()
-    latestPeriod = period
-  } catch (err) {
-    latestPeriod = "1 Jan, 2025 to 30 Apr, 2025"
-    console.error("Error determining latest period:", err)
-  }
-
-  try {
-    // Always use latestPeriod for initial fetch, never 'All'
-    const periodParam = latestPeriod ? `period=${encodeURIComponent(latestPeriod)}` : ""
-    const res = await fetch(`${baseUrl}/api/officials?${periodParam}&v=${API_CACHE_BUSTER}`)
+    const yearsRes = await fetch(`${baseUrl}/api/years`)
+    if (!yearsRes.ok) throw new Error("Failed to fetch years")
+    const { years = [], latestYear = "" } = await yearsRes.json()
+    const yearParam = latestYear ? `year=${encodeURIComponent(latestYear)}` : "period=All"
+    const res = await fetch(`${baseUrl}/api/officials?${yearParam}&v=${API_CACHE_BUSTER}`)
     if (!res.ok) throw new Error("API failed")
     const officials = normalizeOfficials(await res.json())
-    return { props: { officials } }
+    return { props: { officials, years, latestYear } }
   } catch (err) {
-    console.error("Error fetching officials:", err)
-    return { props: { officials: [] } }
+    console.error("Error fetching officials or years:", err)
+    return { props: { officials: [], years: [], latestYear: "" } }
   }
 }
 
-export default function OfficialsPage({ officials: initialOfficials }) {
+export default function OfficialsPage({ officials: initialOfficials, years, latestYear }) {
   const [selectedTitles, setSelectedTitles] = useState([])
-  const [allPeriods, setAllPeriods] = useState([])
-  const [selectedPeriod, setSelectedPeriod] = useState("")
+  const [selectedYear, setSelectedYear] = useState(latestYear)
   const [sortBy, setSortBy] = useState("name")
   const [officials, setOfficials] = useState(normalizeOfficials(initialOfficials))
   const [selectedName, setSelectedName] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
-    fetch("/api/periods")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.periods?.length) {
-          setAllPeriods(data.periods)
-          setSelectedPeriod(data.periods.at(-1))
-        }
-      })
-  }, [])
-
-  useEffect(() => {
     setIsLoading(true)
-    const url = selectedPeriod
-      ? `/api/officials?period=${encodeURIComponent(selectedPeriod)}&v=${API_CACHE_BUSTER}`
+    const url = selectedYear
+      ? `/api/officials?year=${encodeURIComponent(selectedYear)}&v=${API_CACHE_BUSTER}`
       : `/api/officials?period=All&v=${API_CACHE_BUSTER}`
     fetch(url)
       .then((res) => res.json())
       .then((data) => setOfficials(normalizeOfficials(data)))
       .finally(() => setIsLoading(false))
-  }, [selectedPeriod])
+  }, [selectedYear])
 
   const uniqueTitles = Array.from(
     new Set(
@@ -125,7 +104,7 @@ export default function OfficialsPage({ officials: initialOfficials }) {
         <header className="hero-shell">
           <div className="max-w-7xl mx-auto px-4 py-8">
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight">All Officials</h1>
-            <p className="hero-subtitle mt-2">Filter by period, title, and name to inspect current activity patterns.</p>
+            <p className="hero-subtitle mt-2">Filter by year, title, and name to inspect activity patterns.</p>
           </div>
         </header>
         <main className="max-w-7xl mx-auto px-4 py-8">
@@ -145,18 +124,18 @@ export default function OfficialsPage({ officials: initialOfficials }) {
                   styles={selectStyles}
                 />
               </div>
-              {/* Period Filter */}
+              {/* Year Filter */}
               <div className="w-50">
-                <label className="block mb-1 text-sm font-semibold text-muted-ui">Period</label>
+                <label className="block mb-1 text-sm font-semibold text-muted-ui">Year</label>
                 <select
-                  value={selectedPeriod}
-                  onChange={(e) => setSelectedPeriod(e.target.value)}
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(e.target.value)}
                   className="native-select w-full px-4 py-2 border border-[var(--ui-border)] rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">All Periods</option>
-                  {allPeriods.map((period) => (
-                    <option key={period} value={period}>
-                      {period}
+                  <option value="">All Years</option>
+                  {years.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
                     </option>
                   ))}
                 </select>

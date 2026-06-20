@@ -22,7 +22,12 @@ export default async function handler(req, res) {
   try {
     const db = await getDb()
 
-    const { period, job_titles } = req.query
+    const { period, year, job_titles } = req.query
+    const hasYearFilter = typeof year === "string" && /^\d{4}$/.test(year)
+    const hasPeriodFilter = !hasYearFilter && period && period !== "All"
+    const hasTimeFilter = hasYearFilter || hasPeriodFilter
+    const timeCondition = hasYearFilter ? "AND substr(TRIM(lr.period), -4) = ?" : "AND lr.period = ?"
+    const timeParams = hasYearFilter ? [year] : hasPeriodFilter ? [period] : []
     // Parse job_titles from comma-separated string to array
     let allowedJobTitles = null
     if (job_titles) {
@@ -33,7 +38,7 @@ export default async function handler(req, res) {
       jobTitleCondition = ` AND dpo.job_title IN (${allowedJobTitles.map(() => "?").join(",")}) `
     }
     let rows
-    if (period && period !== "All") {
+    if (hasTimeFilter) {
       rows = await db.all(
         `
           SELECT
@@ -44,10 +49,10 @@ export default async function handler(req, res) {
           FROM dpo_entries dpo
           JOIN lobbying_records lr ON dpo.lobbying_record_id = lr.id
           WHERE person_name IS NOT NULL AND TRIM(person_name) != ''
-            AND lr.period = ?
+            ${timeCondition}
             ${jobTitleCondition}
         `,
-        [period, ...(allowedJobTitles || [])]
+        [...timeParams, ...(allowedJobTitles || [])]
       )
     } else {
       rows = await db.all(
@@ -112,10 +117,10 @@ export default async function handler(req, res) {
         FROM dpo_entries dpo
         JOIN lobbying_records lr ON dpo.lobbying_record_id = lr.id
         WHERE dpo.person_name IS NOT NULL AND TRIM(dpo.person_name) != ''
-          ${period && period !== "All" ? "AND lr.period = ?" : ""}
+          ${hasTimeFilter ? timeCondition : ""}
           ${jobTitleCondition}
       `,
-      period && period !== "All" ? [period, ...(allowedJobTitles || [])] : allowedJobTitles || []
+      [...timeParams, ...(allowedJobTitles || [])]
     )
 
     const countMap = new Map()
@@ -138,7 +143,7 @@ export default async function handler(req, res) {
     }
 
     let officials
-    if (period && period !== "All") {
+    if (hasTimeFilter) {
       officials = Array.from(nameMap.values()).map((variants) => {
         const v = variants.slice().sort((a, b) => a.name.localeCompare(b.name))[0]
         return {

@@ -126,7 +126,7 @@ export default async function handler(req, res) {
       methodFilters.forEach((m) => filterParams.push("%" + m.toLowerCase() + "%"))
     }
     if (year) {
-      filterConditions += " AND strftime('%Y', lr.date_published) = ? "
+      filterConditions += " AND substr(TRIM(lr.period), -4) = ? "
       filterParams.push(year)
     }
     if (activeOfficialScope === "only-this-official") {
@@ -377,7 +377,7 @@ export default async function handler(req, res) {
     // Compute unique filter options.
     const uniqueLobbyists = Array.from(new Set(allRecords.map((r) => r.lobbyist_name).filter(Boolean))).sort()
     const uniqueYears = Array.from(
-      new Set(allRecords.map((r) => new Date(r.date_published).getFullYear().toString()).filter(Boolean))
+      new Set(allRecords.map((r) => String(r.period || "").trim().slice(-4)).filter((value) => /^\d{4}$/.test(value)))
     ).sort((a, b) => b - a)
     const uniqueMethods = Array.from(
       new Set(allRecords.flatMap((r) => (r.lobbying_activities || []).map(extractMethod)).filter(Boolean))

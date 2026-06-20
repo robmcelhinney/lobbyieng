@@ -25,31 +25,28 @@ function normalizeOfficials(rows) {
     .filter((row) => row.name && row.slug)
 }
 
-const API_CACHE_BUSTER = "2"
+const API_CACHE_BUSTER = "3"
 
 export async function getOfficialsPageProps(context, officialTitles = dailOfficialTitles) {
   const baseUrl = getServerBaseUrl(context.req)
   try {
-    const periodsRes = await fetch(`${baseUrl}/api/periods`)
-    const periodsJson = periodsRes.ok ? await periodsRes.json() : { periods: [] }
-    const allPeriods = periodsJson.periods || []
-
-    const latestRes = await fetch(`${baseUrl}/api/periods-latest`)
-    const latestJson = latestRes.ok ? await latestRes.json() : {}
-    const latestPeriod = latestJson.period || allPeriods.at(-1) || ""
+    const yearsRes = await fetch(`${baseUrl}/api/years`)
+    const yearsJson = yearsRes.ok ? await yearsRes.json() : { years: [], latestYear: "" }
+    const years = yearsJson.years || []
+    const latestYear = yearsJson.latestYear || years.at(-1) || ""
 
     const jobTitlesParam = officialTitles.join(",")
     const res = await fetch(
-      `${baseUrl}/api/officials?period=${encodeURIComponent(
-        latestPeriod
+      `${baseUrl}/api/officials?year=${encodeURIComponent(
+        latestYear
       )}&job_titles=${encodeURIComponent(jobTitlesParam)}&v=${API_CACHE_BUSTER}`
     )
     if (!res.ok) throw new Error("API failed")
     const officials = normalizeOfficials(await res.json())
-    return { props: { officials, allPeriods, latestPeriod } }
+    return { props: { officials, years, latestYear } }
   } catch (err) {
     console.error("Error fetching officials or periods:", err)
-    return { props: { officials: [], allPeriods: [], latestPeriod: "" } }
+    return { props: { officials: [], years: [], latestYear: "" } }
   }
 }
 
@@ -61,16 +58,16 @@ function dedupedOfficials(array) {
   return Array.from(new Map(array.map((item) => [item.slug, item])).values())
 }
 
-export default function Index({ officials: initialOfficials, allPeriods, latestPeriod, directory = "dail" }) {
+export default function Index({ officials: initialOfficials, years, latestYear, directory = "dail" }) {
   const isSenatorsDirectory = directory === "senators"
   const officialTitles = isSenatorsDirectory ? senatorOfficialTitles : dailOfficialTitles
   const pageTitle = isSenatorsDirectory ? "Senators" : "Dáil"
   const heading = isSenatorsDirectory ? "Find a Senator" : "Find a TD"
   const description = isSenatorsDirectory
-    ? "Search and explore Irish Senators and lobbying activity. Filter by period and name."
-    : "Search and explore Irish Dáil members and lobbying activity. Filter by period, name, and job title."
+    ? "Search and explore Irish Senators and lobbying activity. Filter by year and name."
+    : "Search and explore Irish Dáil members and lobbying activity. Filter by year and name."
   const canonicalPath = isSenatorsDirectory ? "/senators" : "/dail"
-  const [selectedPeriod, setSelectedPeriod] = useState(latestPeriod)
+  const [selectedYear, setSelectedYear] = useState(latestYear)
   const [selectedName, setSelectedName] = useState(null)
   const [sortBy, setSortBy] = useState("name")
   const [officials, setOfficials] = useState(normalizeOfficials(initialOfficials))
@@ -79,14 +76,14 @@ export default function Index({ officials: initialOfficials, allPeriods, latestP
   useEffect(() => {
     setIsLoading(true)
     const jobTitlesParam = officialTitles.join(",")
-    const url = selectedPeriod
-      ? `/api/officials?period=${encodeURIComponent(selectedPeriod)}&job_titles=${encodeURIComponent(jobTitlesParam)}&v=${API_CACHE_BUSTER}`
+    const url = selectedYear
+      ? `/api/officials?year=${encodeURIComponent(selectedYear)}&job_titles=${encodeURIComponent(jobTitlesParam)}&v=${API_CACHE_BUSTER}`
       : `/api/officials?period=All&job_titles=${encodeURIComponent(jobTitlesParam)}&v=${API_CACHE_BUSTER}`
     fetch(url)
       .then((res) => res.json())
       .then((data) => setOfficials(normalizeOfficials(data)))
       .finally(() => setIsLoading(false))
-  }, [officialTitles, selectedPeriod])
+  }, [officialTitles, selectedYear])
 
   const filtered = officials.filter((o) => {
     return selectedName ? o.name === selectedName.value : true
@@ -151,16 +148,16 @@ export default function Index({ officials: initialOfficials, allPeriods, latestP
         <main className="max-w-7xl mx-auto px-4 py-8">
           <div className="surface-card mb-6 flex flex-col sm:flex-row gap-6 items-end">
             <div className="w-50">
-              <label className="block mb-1 text-sm font-semibold text-muted-ui">Period</label>
+              <label className="block mb-1 text-sm font-semibold text-muted-ui">Year</label>
               <select
-                value={selectedPeriod}
-                onChange={(e) => setSelectedPeriod(e.target.value)}
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
                 className="native-select w-full border border-[var(--ui-border)] rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">All Periods</option>
-                {allPeriods.map((period) => (
-                  <option key={period} value={period}>
-                    {period}
+                <option value="">All Years</option>
+                {years.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
                   </option>
                 ))}
               </select>
@@ -193,11 +190,11 @@ export default function Index({ officials: initialOfficials, allPeriods, latestP
               </select>
             </div>
 
-            {(selectedPeriod || selectedName) && (
+            {(selectedYear || selectedName) && (
               <div>
                 <button
                   onClick={() => {
-                    setSelectedPeriod("")
+                    setSelectedYear("")
                     setSelectedName(null)
                   }}
                   className="text-sm font-semibold text-[color:var(--ui-primary)] hover:underline"

@@ -26,11 +26,11 @@ export default async function handler(req, res) {
   let dateFilter = ""
   let dateParams = []
   if (start_year) {
-    dateFilter += " AND strftime('%Y', lr.date_published) >= ? "
+    dateFilter += " AND substr(TRIM(lr.period), -4) >= ? "
     dateParams.push(start_year)
   }
   if (end_year) {
-    dateFilter += " AND strftime('%Y', lr.date_published) <= ? "
+    dateFilter += " AND substr(TRIM(lr.period), -4) <= ? "
     dateParams.push(end_year)
   }
 

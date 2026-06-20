@@ -32,67 +32,44 @@ function normalizeLobbyists(rows) {
     .filter((row) => row.name)
 }
 
-const API_CACHE_BUSTER = "2"
+const API_CACHE_BUSTER = "3"
 
 export async function getServerSideProps({ req }) {
   const baseUrl = getServerBaseUrl(req)
   try {
-    // Fetch all unique periods
-    const periodsRes = await fetch(`${baseUrl}/api/officials?period=All`)
-    const officials = periodsRes.ok ? await periodsRes.json() : []
-    // Extract all unique periods from officials (like dail.js)
-    const allPeriods = Array.from(new Set(officials.flatMap((o) => o.periods || [])))
-    // Sort periods by year/month (like dail.js)
-    function extractYearMonth(period) {
-      const match = period && period.match(/(\d{1,2}) (\w+), (\d{4})/)
-      if (!match) return { year: 0, month: 0 }
-      const year = parseInt(match[3], 10)
-      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-      const month = monthNames.indexOf(match[2]) + 1
-      return { year, month }
-    }
-    allPeriods.sort((a, b) => {
-      const ay = extractYearMonth(a)
-      const by = extractYearMonth(b)
-      if (ay.year !== by.year) return ay.year - by.year
-      return ay.month - by.month
-    })
-    // Fetch latest period
-    const latestRes = await fetch(`${baseUrl}/api/periods-latest`)
-    const latestJson = latestRes.ok ? await latestRes.json() : {}
-    const latestPeriod = latestJson.period || (allPeriods.length > 0 ? allPeriods[allPeriods.length - 1] : "")
-    // Fetch lobbyists for latest period
-    const lobbyistsRes = await fetch(
-      `${baseUrl}/api/lobbyists?period=${encodeURIComponent(latestPeriod)}&v=${API_CACHE_BUSTER}`
-    )
+    const yearsRes = await fetch(`${baseUrl}/api/years`)
+    const yearsJson = yearsRes.ok ? await yearsRes.json() : { years: [], latestYear: "" }
+    const years = yearsJson.years || []
+    const latestYear = yearsJson.latestYear || years.at(-1) || ""
+    const lobbyistsRes = await fetch(`${baseUrl}/api/lobbyists?year=${encodeURIComponent(latestYear)}&v=${API_CACHE_BUSTER}`)
     const rows = lobbyistsRes.ok ? await lobbyistsRes.json() : []
     const lobbyists = normalizeLobbyists(rows)
     return {
       props: {
         lobbyists,
-        allPeriods,
-        latestPeriod
+        years,
+        latestYear
       }
     }
   } catch (err) {
     console.error("Error fetching lobbyists or periods:", err)
-    return { props: { lobbyists: [], allPeriods: [], latestPeriod: "" } }
+    return { props: { lobbyists: [], years: [], latestYear: "" } }
   }
 }
 
-export default function LobbyistsPage({ lobbyists: initialLobbyists, allPeriods, latestPeriod }) {
+export default function LobbyistsPage({ lobbyists: initialLobbyists, years, latestYear }) {
   const [selectedName, setSelectedName] = useState(null)
-  const [selectedPeriod, setSelectedPeriod] = useState(latestPeriod)
+  const [selectedYear, setSelectedYear] = useState(latestYear)
   const [lobbyists, setLobbyists] = useState(initialLobbyists)
   const [sortBy, setSortBy] = useState("name")
   const [isLoading, setIsLoading] = useState(false)
-  // Update lobbyists when period changes
+  // Update lobbyists when year changes
   useEffect(() => {
     async function fetchLobbyists() {
       setIsLoading(true)
       const url =
-        selectedPeriod && selectedPeriod !== "All"
-        ? `/api/lobbyists?period=${encodeURIComponent(selectedPeriod)}&v=${API_CACHE_BUSTER}`
+        selectedYear
+        ? `/api/lobbyists?year=${encodeURIComponent(selectedYear)}&v=${API_CACHE_BUSTER}`
         : `/api/lobbyists?period=All&v=${API_CACHE_BUSTER}`
       const res = await fetch(url)
       const rows = res.ok ? await res.json() : []
@@ -102,7 +79,7 @@ export default function LobbyistsPage({ lobbyists: initialLobbyists, allPeriods,
     }
 
     fetchLobbyists()
-  }, [selectedPeriod])
+  }, [selectedYear])
   const sortOptions = [
     { value: "name", label: "Name" },
     { value: "returns-desc", label: "Most returns" },
@@ -142,18 +119,18 @@ export default function LobbyistsPage({ lobbyists: initialLobbyists, allPeriods,
         </header>
         <main className="max-w-7xl mx-auto px-4 py-8">
           <div className="surface-card mb-6 flex flex-col sm:flex-row gap-6 items-end">
-            {/* Period Filter */}
+            {/* Year Filter */}
             <div className="w-50">
-              <label className="block text-sm font-semibold text-muted-ui mb-1">Period</label>
+              <label className="block text-sm font-semibold text-muted-ui mb-1">Year</label>
               <select
-                value={selectedPeriod}
-                onChange={(e) => setSelectedPeriod(e.target.value || "All")}
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
                 className="native-select w-full border border-[var(--ui-border)] rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">All Periods</option>
-                {allPeriods.map((period) => (
-                  <option key={period} value={period}>
-                    {period}
+                <option value="">All Years</option>
+                {years.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
                   </option>
                 ))}
               </select>
@@ -184,12 +161,12 @@ export default function LobbyistsPage({ lobbyists: initialLobbyists, allPeriods,
                 ))}
               </select>
             </div>
-            {(selectedName || selectedPeriod !== latestPeriod) && (
+            {(selectedName || selectedYear !== latestYear) && (
               <div>
                 <button
                   onClick={() => {
                     setSelectedName(null)
-                    setSelectedPeriod("")
+                    setSelectedYear("")
                   }}
                   className="text-sm font-semibold text-[color:var(--ui-primary)] hover:underline"
                 >
