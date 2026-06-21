@@ -94,9 +94,9 @@ Alternatively:
 make build-db
 ```
 
-### 🖼️ Fetch Dáil Thumbnails (optional)
+### 🖼️ Fetch Oireachtas Thumbnails (optional)
 
-TD thumbnail images are committed in `public/images/td_thumbnails/`. To refresh them:
+Dáil member thumbnail images are committed in `public/images/td_thumbnails/`. To refresh them:
 
 ```bash
 uv run python download-oireachtas-images.py

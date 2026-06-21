@@ -3,7 +3,6 @@ import os
 import re
 import requests
 import unicodedata
-from typing import Optional
 
 API_BASE = "https://api.oireachtas.ie/v1"
 MEMBERS_EP = f"{API_BASE}/members"
@@ -28,7 +27,7 @@ def slugify(name: str) -> str:
     return name
 
 
-def download_thumbnails(chamber: str = "dail", date_start: Optional[str] = None, page_size: int = 100):
+def download_thumbnails(chamber: str = "dail", date_start: str | None = None, page_size: int = 100):
     config = CHAMBER_CONFIG[chamber]
     output_dir = config["output_dir"]
     date_start = date_start or config["date_start"]
