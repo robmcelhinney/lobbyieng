@@ -216,7 +216,7 @@ export default async function handler(req, res) {
 
     const uniqueOfficials = Array.from(new Set(allRecords.flatMap((r) => r.dpo_entries).filter(Boolean))).sort()
     const uniqueYears = Array.from(
-      new Set(allRecords.map((r) => String(r.period || "").trim().slice(-4)).filter((value) => /^\d{4}$/.test(value)))
+      new Set(allRaw.map((r) => String(r.period || "").trim().slice(-4)).filter((value) => /^\d{4}$/.test(value)))
     ).sort((a, b) => b - a)
 
     const payload = {

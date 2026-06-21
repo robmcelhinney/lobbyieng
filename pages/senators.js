@@ -1,7 +1,7 @@
 import OfficialsDirectory, { getOfficialsPageProps, senatorOfficialTitles } from "./dail"
 
 export async function getServerSideProps(context) {
-  return getOfficialsPageProps(context, senatorOfficialTitles)
+  return getOfficialsPageProps(context, senatorOfficialTitles, "seanad")
 }
 
 export default function SenatorsPage(props) {

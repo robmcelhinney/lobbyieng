@@ -252,6 +252,90 @@ export default function OfficialPage({ officialData }) {
               </div>
             </div>
 
+            {profile?.oireachtas_profile ? (
+              <div className="mt-4">
+                <div className="rounded-lg border border-[var(--ui-border)] bg-white/70 dark:bg-slate-900/20 p-4">
+                  <h3 className="text-sm font-semibold mb-2">Oireachtas Profile</h3>
+                  <div className="space-y-3 text-sm">
+                    {profile.oireachtas_profile.member_url ? (
+                      <a
+                        href={profile.oireachtas_profile.member_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex font-medium text-[color:var(--ui-primary)] hover:underline"
+                      >
+                        View on oireachtas.ie
+                      </a>
+                    ) : null}
+
+                    {(profile.oireachtas_profile.emails?.length ||
+                      profile.oireachtas_profile.phones?.length ||
+                      profile.oireachtas_profile.social_links?.length) ? (
+                      <div className="pt-2 border-t border-[var(--ui-border)] space-y-3">
+                        {profile.oireachtas_profile.emails?.length ? (
+                          <div>
+                            <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-300 mb-1">
+                              Email
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {profile.oireachtas_profile.emails.map((email) => (
+                                <a
+                                  key={email}
+                                  href={`mailto:${email}`}
+                                  className="rounded-full border border-[var(--ui-border)] bg-white/80 dark:bg-slate-900/35 px-2.5 py-1 hover:underline"
+                                >
+                                  {email}
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
+
+                        {profile.oireachtas_profile.phones?.length ? (
+                          <div>
+                            <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-300 mb-1">
+                              Phone
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {profile.oireachtas_profile.phones.map((phone) => (
+                                <span
+                                  key={phone}
+                                  className="rounded-full border border-[var(--ui-border)] bg-white/80 dark:bg-slate-900/35 px-2.5 py-1"
+                                >
+                                  {phone}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
+
+                        {profile.oireachtas_profile.social_links?.length ? (
+                          <div>
+                            <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-300 mb-1">
+                              Socials
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {profile.oireachtas_profile.social_links.map((social) => (
+                                <a
+                                  key={`${social.label}-${social.url}`}
+                                  href={social.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="rounded-full border border-[var(--ui-border)] bg-white/80 dark:bg-slate-900/35 px-2.5 py-1 hover:underline"
+                                >
+                                  {social.label || social.text || social.url}
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
               <div>
                 <h3 className="text-sm font-semibold mb-2">Observed Titles</h3>

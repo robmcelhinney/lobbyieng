@@ -1,5 +1,6 @@
 import { getDb } from "../../../lib/sqlite"
 import { buildCacheKey, readCache, writeCache } from "../../../lib/serverCache"
+import { fetchOireachtasMemberContacts, loadCurrentOireachtasRoster } from "../../../lib/oireachtasRoster"
 
 function slugify(name) {
   return name
@@ -346,6 +347,11 @@ export default async function handler(req, res) {
     const distinctTitles = Array.from(new Set(dpoProfileRows.map((r) => r.job_title).filter(Boolean))).sort()
     const distinctBodies = Array.from(new Set(dpoProfileRows.map((r) => r.public_body).filter(Boolean))).sort()
     const officialSlug = slugify(canonical)
+    const currentRoster = await loadCurrentOireachtasRoster()
+    const currentRosterMember = currentRoster.find((member) => member?.slug === officialSlug)
+    const oireachtasContacts = currentRosterMember?.member_url
+      ? fetchOireachtasMemberContacts(currentRosterMember.member_url)
+      : { emails: [], phones: [], social_links: [] }
     let committeeMemberships = []
     try {
       committeeMemberships = await db.all(
@@ -377,7 +383,7 @@ export default async function handler(req, res) {
     // Compute unique filter options.
     const uniqueLobbyists = Array.from(new Set(allRecords.map((r) => r.lobbyist_name).filter(Boolean))).sort()
     const uniqueYears = Array.from(
-      new Set(allRecords.map((r) => String(r.period || "").trim().slice(-4)).filter((value) => /^\d{4}$/.test(value)))
+      new Set(allRaw.map((r) => String(r.period || "").trim().slice(-4)).filter((value) => /^\d{4}$/.test(value)))
     ).sort((a, b) => b - a)
     const uniqueMethods = Array.from(
       new Set(allRecords.flatMap((r) => (r.lobbying_activities || []).map(extractMethod)).filter(Boolean))
@@ -398,6 +404,18 @@ export default async function handler(req, res) {
         last_seen_at: lastSeen,
         distinct_titles: distinctTitles,
         distinct_public_bodies: distinctBodies,
+        oireachtas_profile: currentRosterMember
+          ? {
+              chamber: currentRosterMember.chamber || null,
+              member_url: currentRosterMember.member_url || null,
+              image_url: currentRosterMember.image_url || null,
+              party: currentRosterMember.party || null,
+              constituency: currentRosterMember.constituency || null,
+              emails: oireachtasContacts.emails || [],
+              phones: oireachtasContacts.phones || [],
+              social_links: oireachtasContacts.social_links || []
+            }
+          : null,
         committee_memberships: committeeMemberships.map((committee) => ({
           ...committee,
           slug: committeeSlugify(committee.name)

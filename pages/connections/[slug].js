@@ -64,6 +64,8 @@ export default function ConnectionsOfficial() {
   const { slug } = router.query
   const officialSlug = slug ? String(slug).trim().toLowerCase() : ""
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || ""
+  const apiBaseUrl = ""
+  const routerYear = typeof router.query.year === "string" ? router.query.year : ""
 
   const [graphData, setGraphData] = useState({ nodes: [], links: [] })
   const fgRef = useRef()
@@ -137,13 +139,12 @@ export default function ConnectionsOfficial() {
   }
 
   useEffect(() => {
+    let cancelled = false
+
     async function fetchFilters() {
       try {
         setFiltersReady(false)
-        const [filtersRes, latestRes] = await Promise.all([
-          fetch(`${baseUrl}/api/officials/${officialSlug}?per_page=All`),
-          fetch(`${baseUrl}/api/periods-latest`)
-        ])
+        const filtersRes = await fetch(`${apiBaseUrl}/api/officials/${officialSlug}?per_page=All`)
         if (!filtersRes.ok) throw new Error("Official not found or failed to fetch filters")
 
         const data = await filtersRes.json()
@@ -152,17 +153,13 @@ export default function ConnectionsOfficial() {
         setYears(nextYears)
         setMethods(nextMethods)
 
-        let latestYear = "All"
-        if (latestRes.ok) {
-          const latest = await latestRes.json()
-          const match = latest.period && latest.period.match(/\d{4}/g)
-          const fromPeriod = match && match.length ? match[match.length - 1] : null
-          if (fromPeriod && nextYears.includes(fromPeriod)) latestYear = fromPeriod
-        }
+        const latestYear = nextYears[0] || "All"
+        if (cancelled) return
         setSelectedYear(latestYear)
         setSelectedMethod(nextMethods.includes("Meeting") ? "Meeting" : "All")
         setFiltersReady(true)
       } catch (err) {
+        if (cancelled) return
         setError(err.message)
         setYears([])
         setMethods([])
@@ -170,7 +167,16 @@ export default function ConnectionsOfficial() {
       }
     }
     if (officialSlug) fetchFilters()
+    return () => {
+      cancelled = true
+    }
   }, [officialSlug, baseUrl])
+
+  useEffect(() => {
+    if (!filtersReady || !years.length || !routerYear) return
+    if (!years.includes(routerYear)) return
+    setSelectedYear((current) => (current === routerYear ? current : routerYear))
+  }, [filtersReady, years, routerYear])
 
   useEffect(() => {
     if (!filtersReady || !selectedYear || !officialSlug) return
@@ -181,7 +187,7 @@ export default function ConnectionsOfficial() {
         const yearParam = selectedYear && selectedYear !== "All" ? `&year=${encodeURIComponent(selectedYear)}` : ""
         const methodParam =
           selectedMethod && selectedMethod !== "All" ? `&method=${encodeURIComponent(selectedMethod)}` : ""
-        const res = await fetch(`${baseUrl}/api/officials/${officialSlug}?per_page=All${yearParam}${methodParam}`)
+        const res = await fetch(`${apiBaseUrl}/api/officials/${officialSlug}?per_page=All${yearParam}${methodParam}`)
         if (!res.ok) throw new Error("Official not found or failed to fetch data")
         const data = await res.json()
         const centralName = data.name || officialSlug.replace(/-/g, " ")
@@ -364,7 +370,17 @@ export default function ConnectionsOfficial() {
                 <label className="mr-2 font-medium">Year:</label>
                 <select
                   value={selectedYear}
-                  onChange={(e) => setSelectedYear(e.target.value)}
+                  onChange={(e) => {
+                    const nextYear = e.target.value
+                    setSelectedYear(nextYear)
+                    const query = { ...router.query }
+                    if (nextYear === "All") {
+                      delete query.year
+                    } else {
+                      query.year = nextYear
+                    }
+                    router.replace({ pathname: router.pathname, query }, undefined, { shallow: true, scroll: false })
+                  }}
                   className="native-select border border-[var(--ui-border)] rounded px-2 py-1"
                 >
                   <option value="All">All</option>

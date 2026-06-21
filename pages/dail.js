@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
 import Select from "react-select"
 import Head from "next/head"
@@ -27,13 +27,18 @@ function normalizeOfficials(rows) {
 
 const API_CACHE_BUSTER = "3"
 
-export async function getOfficialsPageProps(context, officialTitles = dailOfficialTitles) {
+export async function getOfficialsPageProps(context, officialTitles = dailOfficialTitles, chamber = "dail") {
   const baseUrl = getServerBaseUrl(context.req)
   try {
     const yearsRes = await fetch(`${baseUrl}/api/years`)
     const yearsJson = yearsRes.ok ? await yearsRes.json() : { years: [], latestYear: "" }
     const years = yearsJson.years || []
     const latestYear = yearsJson.latestYear || years.at(-1) || ""
+    const rosterRes = await fetch(`${baseUrl}/api/current-oireachtas-members?chamber=${encodeURIComponent(chamber)}`)
+    const currentRoster = rosterRes.ok ? await rosterRes.json() : []
+    const currentRosterSlugs = Array.from(
+      new Set((Array.isArray(currentRoster) ? currentRoster : []).map((member) => member?.slug).filter(Boolean))
+    )
 
     const jobTitlesParam = officialTitles.join(",")
     const res = await fetch(
@@ -42,11 +47,11 @@ export async function getOfficialsPageProps(context, officialTitles = dailOffici
       )}&job_titles=${encodeURIComponent(jobTitlesParam)}&v=${API_CACHE_BUSTER}`
     )
     if (!res.ok) throw new Error("API failed")
-    const officials = normalizeOfficials(await res.json())
-    return { props: { officials, years, latestYear } }
+    const officials = normalizeOfficials(await res.json()).filter((official) => currentRosterSlugs.includes(official.slug))
+    return { props: { officials, years, latestYear, currentRosterSlugs } }
   } catch (err) {
     console.error("Error fetching officials or periods:", err)
-    return { props: { officials: [], years: [], latestYear: "" } }
+    return { props: { officials: [], years: [], latestYear: "", currentRosterSlugs: [] } }
   }
 }
 
@@ -58,7 +63,7 @@ function dedupedOfficials(array) {
   return Array.from(new Map(array.map((item) => [item.slug, item])).values())
 }
 
-export default function Index({ officials: initialOfficials, years, latestYear, directory = "dail" }) {
+export default function Index({ officials: initialOfficials, years, latestYear, currentRosterSlugs, directory = "dail" }) {
   const isSenatorsDirectory = directory === "senators"
   const officialTitles = isSenatorsDirectory ? senatorOfficialTitles : dailOfficialTitles
   const pageTitle = isSenatorsDirectory ? "Senators" : "Dáil"
@@ -72,6 +77,7 @@ export default function Index({ officials: initialOfficials, years, latestYear, 
   const [sortBy, setSortBy] = useState("name")
   const [officials, setOfficials] = useState(normalizeOfficials(initialOfficials))
   const [isLoading, setIsLoading] = useState(false)
+  const rosterSlugSet = useMemo(() => new Set(currentRosterSlugs || []), [currentRosterSlugs])
 
   useEffect(() => {
     setIsLoading(true)
@@ -81,9 +87,11 @@ export default function Index({ officials: initialOfficials, years, latestYear, 
       : `/api/officials?period=All&job_titles=${encodeURIComponent(jobTitlesParam)}&v=${API_CACHE_BUSTER}`
     fetch(url)
       .then((res) => res.json())
-      .then((data) => setOfficials(normalizeOfficials(data)))
+      .then((data) =>
+        setOfficials(normalizeOfficials(data).filter((official) => rosterSlugSet.has(official.slug)))
+      )
       .finally(() => setIsLoading(false))
-  }, [officialTitles, selectedYear])
+  }, [officialTitles, rosterSlugSet, selectedYear])
 
   const filtered = officials.filter((o) => {
     return selectedName ? o.name === selectedName.value : true

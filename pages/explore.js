@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Head from "next/head"
 import Link from "next/link"
 import { Bar } from "react-chartjs-2"
@@ -128,7 +128,9 @@ function RankList({ items, valueKey, nameKey = "name", linkPrefix, emptyLabel = 
   )
 }
 
-function CompactBarChart({ items, valueKey, nameKey = "name", title, type = "neutral" }) {
+function CompactBarChart({ items, valueKey, nameKey = "name", title, type = "neutral", loading = false }) {
+  if (loading) return null
+
   const top = (items || []).slice(0, 10)
   if (!top.length) return null
 
@@ -174,35 +176,78 @@ export default function ExplorePage() {
   const [searchInput, setSearchInput] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [searchInFlightTerm, setSearchInFlightTerm] = useState("")
-
-  const [officialContactView, setOfficialContactView] = useState("latest")
-  const [lobbyistActivityView, setLobbyistActivityView] = useState("latest")
+  const [selectedYear, setSelectedYear] = useState("")
+  const [years, setYears] = useState([])
+  const [latestYear, setLatestYear] = useState("")
   const [moversView, setMoversView] = useState("officials")
   const [centralityView, setCentralityView] = useState("officials")
+  const selectedYearRef = useRef("")
 
-  const fetchInsights = async (term = "") => {
+  useEffect(() => {
+    selectedYearRef.current = selectedYear
+  }, [selectedYear])
+
+  const fetchInsights = useCallback(async (term = "", year = "") => {
     setLoading(true)
     setError("")
     try {
-      const query = term ? `?q=${encodeURIComponent(term)}` : ""
+      const params = new URLSearchParams()
+      if (term) params.set("q", term)
+      if (year) params.set("year", year)
+      const query = params.toString() ? `?${params.toString()}` : ""
       const res = await fetch(`/api/explore/insights${query}`)
       if (!res.ok) throw new Error("Failed to load exploration insights")
       const json = await res.json()
       setData(json)
+      if (!selectedYearRef.current && json?.selected_year) {
+        setSelectedYear(json.selected_year)
+      }
     } catch (err) {
       setError(err.message || "Failed to load exploration insights")
     } finally {
       setSearchInFlightTerm("")
       setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     fetchInsights()
+  }, [fetchInsights])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function fetchYears() {
+      try {
+        const res = await fetch("/api/years")
+        if (!res.ok) return
+        const json = await res.json()
+        if (cancelled) return
+
+        const nextYears = Array.isArray(json?.years) ? json.years.filter(Boolean).sort((a, b) => b.localeCompare(a)) : []
+        setYears(nextYears)
+        const nextLatestYear = json?.latestYear || nextYears.at(-1) || ""
+        setLatestYear(nextLatestYear)
+
+        if (!selectedYearRef.current && nextLatestYear) {
+          setSelectedYear(nextLatestYear)
+        }
+      } catch {
+        // Keep the insights data available even if the year list fails to load.
+      }
+    }
+
+    fetchYears()
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
-  const latestPeriod = data?.latest_period
-  const previousPeriod = data?.previous_period
+  const activeYear = selectedYear || data?.selected_year || latestYear || data?.latest_year
+  const isAllTime = selectedYear === "all"
+  const timeRangeLabel = isAllTime ? "All time" : activeYear || "Unknown"
+  const previousYear = isAllTime ? null : data?.previous_year || data?.previous_period
 
   const searchSummary = useMemo(() => {
     if (!searchTerm) return ""
@@ -210,14 +255,13 @@ export default function ExplorePage() {
     return `${count} results for "${searchTerm}"`
   }, [searchTerm, data?.search_results])
 
-  const officialContactItems =
-    officialContactView === "latest" ? data?.top_targets_latest || [] : data?.top_targets_last_year || []
-  const lobbyistActivityItems =
-    lobbyistActivityView === "latest" ? data?.top_lobbyists_latest || [] : data?.most_active_lobbyists || []
+  const yearOptions = years.length ? years : data?.years || []
+  const officialContactItems = data?.top_targets_selected || []
+  const lobbyistActivityItems = data?.top_lobbyists_selected || []
   const moversItems =
     moversView === "officials" ? data?.biggest_mover_officials || [] : data?.biggest_mover_lobbyists || []
   const centralityItems =
-    centralityView === "officials" ? data?.official_centrality_latest || [] : data?.lobbyist_centrality_latest || []
+    centralityView === "officials" ? data?.official_centrality_selected || [] : data?.lobbyist_centrality_selected || []
   const centralityLinkPrefix = centralityView === "officials" ? "/officials" : "/lobbyists"
   const moversLinkPrefix = moversView === "officials" ? "/officials" : "/lobbyists"
 
@@ -239,14 +283,38 @@ export default function ExplorePage() {
             <p className="hero-subtitle mt-3 max-w-3xl">
               Fast comparative views for volume, momentum, topics, and network structure across lobbying returns.
             </p>
-            <div className="mt-4 text-sm text-blue-100">
-              Latest period: <strong>{latestPeriod || "Unknown"}</strong>
-              {previousPeriod ? (
-                <>
-                  {" "}
-                  | Previous period: <strong>{previousPeriod}</strong>
-                </>
-              ) : null}
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div className="text-sm text-blue-100">
+                Selected time range: <strong>{timeRangeLabel}</strong>
+                {previousYear ? (
+                  <>
+                    {" "}
+                    | Previous year: <strong>{previousYear}</strong>
+                  </>
+                ) : null}
+              </div>
+              <div className="w-full sm:w-56">
+                <label className="block mb-1 text-xs font-semibold uppercase tracking-wide text-blue-100/80">
+                  Time range
+                </label>
+                <select
+                  value={selectedYear || latestYear || ""}
+                  onChange={(e) => {
+                    const nextYear = e.target.value
+                    setSelectedYear(nextYear)
+                    fetchInsights(searchTerm, nextYear)
+                  }}
+                  className="native-select w-full rounded-md border border-white/20 bg-white/10 px-3 py-2 text-white shadow-sm backdrop-blur focus:outline-none focus:ring-2 focus:ring-white/30"
+                >
+                  <option value="">Latest year</option>
+                  <option value="all">All time</option>
+                  {yearOptions.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         </section>
@@ -264,7 +332,7 @@ export default function ExplorePage() {
                 setSearchTerm(next)
                 setSearchInFlightTerm(next)
                 setData((prev) => (prev ? { ...prev, search_results: [] } : prev))
-                fetchInsights(next)
+                fetchInsights(next, selectedYear)
               }}
             >
               <input
@@ -284,7 +352,7 @@ export default function ExplorePage() {
                   setSearchInput("")
                   setSearchTerm("")
                   setSearchInFlightTerm("")
-                  fetchInsights("")
+                  fetchInsights("", selectedYear)
                 }}
               >
                 Clear
@@ -331,43 +399,23 @@ export default function ExplorePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <SectionCard
               title="Most Contacted Officials"
-              subtitle={officialContactView === "latest" ? latestPeriod || "" : "Rolling last 12 months"}
-              controls={
-                <SegmentTabs
-                  tabs={[
-                    { key: "latest", label: "Latest period" },
-                    { key: "year", label: "Last 12 months" }
-                  ]}
-                  active={officialContactView}
-                  onChange={setOfficialContactView}
-                />
-              }
+              subtitle={timeRangeLabel}
             >
               <RankList items={officialContactItems} valueKey="contact_count" linkPrefix="/officials" loading={loading} />
-              <CompactBarChart items={officialContactItems} valueKey="contact_count" title="Contact count" />
+              <CompactBarChart items={officialContactItems} valueKey="contact_count" title="Contact count" loading={loading} />
             </SectionCard>
 
             <SectionCard
               title="Lobbyist Activity"
-              subtitle={lobbyistActivityView === "latest" ? latestPeriod || "" : "All periods"}
-              controls={
-                <SegmentTabs
-                  tabs={[
-                    { key: "latest", label: "Latest period" },
-                    { key: "all", label: "All-time" }
-                  ]}
-                  active={lobbyistActivityView}
-                  onChange={setLobbyistActivityView}
-                />
-              }
+              subtitle={timeRangeLabel}
             >
               <RankList items={lobbyistActivityItems} valueKey="return_count" linkPrefix="/lobbyists" loading={loading} />
-              <CompactBarChart items={lobbyistActivityItems} valueKey="return_count" title="Return count" />
+              <CompactBarChart items={lobbyistActivityItems} valueKey="return_count" title="Return count" loading={loading} />
             </SectionCard>
 
             <SectionCard
               title="Biggest Movers"
-              subtitle={previousPeriod ? `${previousPeriod} → ${latestPeriod}` : "Delta from previous period"}
+              subtitle={isAllTime ? "All time" : previousYear ? `${previousYear} → ${activeYear}` : activeYear || "Delta from previous year"}
               controls={
                 <SegmentTabs
                   tabs={[
@@ -379,8 +427,16 @@ export default function ExplorePage() {
                 />
               }
             >
-              <RankList items={moversItems} valueKey="delta" linkPrefix={moversLinkPrefix} loading={loading} />
-              <CompactBarChart items={moversItems} valueKey="delta" title="Delta" type="delta" />
+              {isAllTime ? (
+                <p className="text-sm text-muted-ui">
+                  Biggest movers is only available when comparing two years.
+                </p>
+              ) : (
+                <>
+                  <RankList items={moversItems} valueKey="delta" linkPrefix={moversLinkPrefix} loading={loading} />
+                  <CompactBarChart items={moversItems} valueKey="delta" title="Delta" type="delta" loading={loading} />
+                </>
+              )}
             </SectionCard>
 
             <SectionCard
@@ -398,37 +454,48 @@ export default function ExplorePage() {
               }
             >
               <RankList items={centralityItems} valueKey="degree" linkPrefix={centralityLinkPrefix} loading={loading} />
-              <CompactBarChart items={centralityItems} valueKey="degree" title="Degree" />
+              <CompactBarChart items={centralityItems} valueKey="degree" title="Degree" loading={loading} />
             </SectionCard>
 
-            <SectionCard title="Top Policy Areas" subtitle={latestPeriod || ""}>
+              <SectionCard title="Top Policy Areas" subtitle={timeRangeLabel}>
               <RankList
-                items={data?.top_policy_areas_latest || []}
+                items={data?.top_policy_areas_selected || []}
                 valueKey="return_count"
                 linkPrefix={null}
                 loading={loading}
               />
-              <CompactBarChart items={data?.top_policy_areas_latest || []} valueKey="return_count" title="Return count" />
+              <CompactBarChart
+                items={data?.top_policy_areas_selected || []}
+                valueKey="return_count"
+                title="Return count"
+                loading={loading}
+              />
             </SectionCard>
 
-            <SectionCard title="Top Keywords" subtitle="Simple tokenization and stemming">
+            <SectionCard title="Top Keywords" subtitle={timeRangeLabel}>
               <RankList
-                items={data?.top_keywords_latest || []}
+                items={data?.top_keywords_selected || []}
                 valueKey="count"
                 nameKey="token"
                 linkPrefix={null}
                 loading={loading}
               />
-              <CompactBarChart items={data?.top_keywords_latest || []} valueKey="count" nameKey="token" title="Token count" />
+              <CompactBarChart
+                items={data?.top_keywords_selected || []}
+                valueKey="count"
+                nameKey="token"
+                title="Token count"
+                loading={loading}
+              />
             </SectionCard>
           </div>
 
-          <SectionCard title="Shared Lobbyists Between Officials" subtitle={latestPeriod || ""}>
+          <SectionCard title="Shared Lobbyists Between Officials" subtitle={timeRangeLabel}>
             {loading ? (
               <p className="text-sm text-muted-ui">Loading data...</p>
-            ) : data?.shared_lobbyists_latest?.length ? (
+            ) : data?.shared_lobbyists_selected?.length ? (
               <ul className="space-y-2">
-                {data.shared_lobbyists_latest.map((row, idx) => (
+                {data.shared_lobbyists_selected.map((row, idx) => (
                   <li
                     key={`${row.official_a}-${row.official_b}-${idx}`}
                     className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border border-[var(--ui-border)] rounded-md px-3 py-2 bg-white/60 dark:bg-slate-900/20"
