@@ -1,21 +1,37 @@
 import React from "react"
 
-function parseDetailsAndMethods(details) {
-  if (!details) return []
-  return details.split(/,(?![^|]*\|)/).map((entry) => {
-    const parts = entry.split("|").map((s) => s.trim())
-    return {
-      description: parts[0] || "",
-      method: parts[1] || null,
-      count: parts[2] || null
-    }
-  })
-}
+function parseActivityEntries(activities, fallbackDetails) {
+  const activityEntries = Array.isArray(activities)
+    ? activities
+        .map((entry) => {
+          if (!entry) return null
+          const parts = String(entry)
+            .split("|")
+            .map((s) => s.trim())
+          return {
+            description: parts[0] || "",
+            method: parts[1] || null,
+            count: parts[2] || null
+          }
+        })
+        .filter(Boolean)
+    : []
 
-function extractMethodFromActivity(activity) {
-  if (!activity) return null
-  const parts = activity.split("|")
-  return parts.length > 1 ? parts[1].trim() : null
+  if (activityEntries.length > 0) return activityEntries
+
+  if (!fallbackDetails) return []
+
+  return String(fallbackDetails)
+    .split(/,(?![^|]*\|)/)
+    .map((entry) => {
+      const parts = entry.split("|").map((s) => s.trim())
+      return {
+        description: parts[0] || "",
+        method: parts[1] || null,
+        count: parts[2] || null
+      }
+    })
+    .filter((item) => item.description || item.method || item.count)
 }
 
 export default function LobbyingCardLobbyist({ record }) {
@@ -40,10 +56,8 @@ export default function LobbyingCardLobbyist({ record }) {
 
   const intent = record.intended_results || "Unknown"
   const details = record.specific_details || "Unknown"
-  const parsed = parseDetailsAndMethods(details)
-
-  const methods = (record.lobbying_activities || []).map(extractMethodFromActivity).filter(Boolean)
-  const uniqueMethods = Array.from(new Set(methods))
+  const parsed = parseActivityEntries(record.lobbying_activities, details)
+  const uniqueMethods = Array.from(new Set(parsed.map((item) => item.method).filter(Boolean)))
 
   // Show Former DPO badge if isFormerDPO is true
   const isFormerDPO = record.isFormerDPO
