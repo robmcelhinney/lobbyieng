@@ -42,4 +42,8 @@ next-env.d.ts
 
 lobbying.db
 
-data
+data/*
+!data/derived/
+data/derived/*
+!data/derived/current_oireachtas_members.json
+!data/derived/committee_memberships.json
