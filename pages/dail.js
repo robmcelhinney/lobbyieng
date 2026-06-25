@@ -47,7 +47,7 @@ export async function getOfficialsPageProps(context, officialTitles = dailOffici
       )}&job_titles=${encodeURIComponent(jobTitlesParam)}&v=${API_CACHE_BUSTER}`
     )
     if (!res.ok) throw new Error("API failed")
-    const officials = normalizeOfficials(await res.json()).filter((official) => currentRosterSlugs.includes(official.slug))
+    const officials = normalizeOfficials(await res.json())
     return { props: { officials, years, latestYear, currentRosterSlugs } }
   } catch (err) {
     console.error("Error fetching officials or periods:", err)
@@ -76,8 +76,10 @@ export default function Index({ officials: initialOfficials, years, latestYear, 
   const [selectedName, setSelectedName] = useState(null)
   const [sortBy, setSortBy] = useState("name")
   const [officials, setOfficials] = useState(normalizeOfficials(initialOfficials))
+  const [currentOnly, setCurrentOnly] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
   const rosterSlugSet = useMemo(() => new Set(currentRosterSlugs || []), [currentRosterSlugs])
+  const hasRosterFilter = rosterSlugSet.size > 0
 
   useEffect(() => {
     setIsLoading(true)
@@ -87,13 +89,13 @@ export default function Index({ officials: initialOfficials, years, latestYear, 
       : `/api/officials?period=All&job_titles=${encodeURIComponent(jobTitlesParam)}&v=${API_CACHE_BUSTER}`
     fetch(url)
       .then((res) => res.json())
-      .then((data) =>
-        setOfficials(normalizeOfficials(data).filter((official) => rosterSlugSet.has(official.slug)))
-      )
+      .then((data) => setOfficials(normalizeOfficials(data)))
       .finally(() => setIsLoading(false))
-  }, [officialTitles, rosterSlugSet, selectedYear])
+  }, [officialTitles, selectedYear])
 
-  const filtered = officials.filter((o) => {
+  const visibleOfficials =
+    currentOnly && hasRosterFilter ? officials.filter((official) => rosterSlugSet.has(official.slug)) : officials
+  const filtered = visibleOfficials.filter((o) => {
     return selectedName ? o.name === selectedName.value : true
   })
   const deduped = dedupedOfficials(filtered)
@@ -197,6 +199,16 @@ export default function Index({ officials: initialOfficials, years, latestYear, 
                 ))}
               </select>
             </div>
+
+            <label className="flex items-center gap-2 text-sm font-semibold text-muted-ui pb-2">
+              <input
+                type="checkbox"
+                checked={currentOnly}
+                onChange={(e) => setCurrentOnly(e.target.checked)}
+                className="h-4 w-4 rounded border-[var(--ui-border)] accent-blue-600 dark:accent-blue-400"
+              />
+              Current {isSenatorsDirectory ? "Senators" : "TDs"} only
+            </label>
 
             {(selectedYear || selectedName) && (
               <div>
