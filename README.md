@@ -27,7 +27,7 @@ Lobbyieng visualises lobbying activity in Ireland. It scrapes the official Regis
 
 ### Prerequisites
 
-- Node.js ≥14
+- Node.js ≥20 (Next.js 15 / React 19)
 - npm or yarn
 - Python ≥3.8
 - SQLite3

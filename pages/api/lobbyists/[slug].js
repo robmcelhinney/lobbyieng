@@ -1,14 +1,7 @@
 import { getDb } from "../../../lib/sqlite"
 import { buildCacheKey, readCache, writeCache } from "../../../lib/serverCache"
-
-function slugify(name) {
-  return name
-    .normalize("NFD")
-    .replace(/[^\p{L}\p{N}]+/gu, "-") // Replace non-alphanumeric (unicode) with dash
-    .replace(/-+/g, "-") // Collapse multiple dashes
-    .replace(/^-|-$/g, "") // Trim leading/trailing dashes
-    .toLowerCase()
-}
+import { slugify } from "../../../lib/slugify"
+import { resolveLobbyistName } from "../../../lib/slugIndex"
 
 export default async function handler(req, res) {
   try {
@@ -30,20 +23,14 @@ export default async function handler(req, res) {
       res.status(200).json(cached)
       return
     }
+    const pageNum = Math.max(1, parseInt(Array.isArray(page) ? page[0] : page, 10) || 1)
     const PER_PAGE = 10
-    const offset = (page - 1) * PER_PAGE
+    const offset = (pageNum - 1) * PER_PAGE
 
     const db = await getDb()
 
-    // Resolve canonical lobbyist name from lobbying_records.
-    const rows = await db.all(`SELECT DISTINCT lobbyist_name FROM lobbying_records`)
-    let canonical = null
-    for (const row of rows) {
-      if (slugify(row.lobbyist_name) === slug) {
-        canonical = row.lobbyist_name
-        break
-      }
-    }
+    // Resolve canonical lobbyist name via cached slug index.
+    const canonical = await resolveLobbyistName(db, slug)
     if (!canonical) {
       return res.status(404).json({ error: "Lobbyist not found" })
     }
@@ -223,7 +210,7 @@ export default async function handler(req, res) {
       name: canonical,
       slug: slugify(canonical),
       total,
-      page: parseInt(page),
+      page: pageNum,
       pageSize: PER_PAGE,
       records: parsedRecords,
       officials: uniqueOfficials,

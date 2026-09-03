@@ -1,5 +1,6 @@
 import { getDb } from "../../../lib/sqlite"
 import { buildCacheKey, readCache, writeCache } from "../../../lib/serverCache"
+import { officialSlugify, slugify } from "../../../lib/slugify"
 
 const STOPWORDS = new Set([
   "the",
@@ -48,17 +49,6 @@ const STOPWORDS = new Set([
   "matters"
 ])
 
-function slugify(name) {
-  return String(name || "")
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase()
-    .trim()
-    .replace(/[^\p{L}\p{N}]+/gu, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
-}
-
 function normalizeToken(raw) {
   const lowered = raw
     .normalize("NFD")
@@ -80,7 +70,7 @@ function normalizeToken(raw) {
   return stem.length >= 3 ? stem : ""
 }
 
-function biggestMovers(currentRows, previousRows, key) {
+function biggestMovers(currentRows, previousRows, key, toSlug = slugify) {
   const map = new Map()
   for (const row of previousRows) {
     map.set(row[key], { name: row[key], previous: row.contact_count, current: 0 })
@@ -95,7 +85,7 @@ function biggestMovers(currentRows, previousRows, key) {
     .map((row) => ({
       ...row,
       delta: row.current - row.previous,
-      slug: slugify(row.name)
+      slug: toSlug(row.name)
     }))
     .filter((row) => row.delta !== 0)
     .sort((a, b) => {
@@ -248,7 +238,9 @@ export default async function handler(req, res) {
         )
       : []
 
-    const biggestMoverOfficials = isAllTime ? [] : biggestMovers(currentOfficialCounts, previousOfficialCounts, "name")
+    const biggestMoverOfficials = isAllTime
+      ? []
+      : biggestMovers(currentOfficialCounts, previousOfficialCounts, "name", officialSlugify)
     const biggestMoverLobbyists = isAllTime ? [] : biggestMovers(currentLobbyistCounts, previousLobbyistCounts, "name")
 
     const topPolicyAreasSelected = yearFilter
@@ -473,18 +465,18 @@ export default async function handler(req, res) {
       selected_time_range: isAllTime ? "all" : selectedYear,
       selected_label: isAllTime ? "All time" : selectedYear,
       years: years.map((row) => row.year).filter(Boolean),
-      top_targets_selected: topTargetsSelected.map((row) => ({ ...row, slug: slugify(row.name) })),
+      top_targets_selected: topTargetsSelected.map((row) => ({ ...row, slug: officialSlugify(row.name) })),
       top_lobbyists_selected: topLobbyistsSelected.map((row) => ({ ...row, slug: slugify(row.name) })),
       biggest_mover_officials: biggestMoverOfficials,
       biggest_mover_lobbyists: biggestMoverLobbyists,
       top_policy_areas_selected: topPolicyAreasSelected,
       top_keywords_selected: topKeywordsSelected,
-      official_centrality_selected: officialCentralitySelected.map((row) => ({ ...row, slug: slugify(row.name) })),
+      official_centrality_selected: officialCentralitySelected.map((row) => ({ ...row, slug: officialSlugify(row.name) })),
       lobbyist_centrality_selected: lobbyistCentralitySelected.map((row) => ({ ...row, slug: slugify(row.name) })),
       shared_lobbyists_selected: sharedLobbyistsSelected.map((row) => ({
         ...row,
-        official_a_slug: slugify(row.official_a),
-        official_b_slug: slugify(row.official_b)
+        official_a_slug: officialSlugify(row.official_a),
+        official_b_slug: officialSlugify(row.official_b)
       })),
       search_term: searchTerm,
       search_results: searchResults.map((row) => ({

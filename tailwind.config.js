@@ -1,5 +1,5 @@
 module.exports = {
-  content: ["./pages/**/*.{js,jsx,ts,tsx}", "./components/**/*.{js,jsx,ts,tsx}"],
+  content: ["./pages/**/*.{js,jsx,ts,tsx}", "./components/**/*.{js,jsx,ts,tsx}", "./lib/**/*.{js,ts}"],
   darkMode: "class", // Enable class-based dark mode
   theme: {
     extend: {

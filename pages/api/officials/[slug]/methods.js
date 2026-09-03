@@ -1,14 +1,5 @@
 import { getDb } from "../../../../lib/sqlite"
-
-// Slugify function matching pages/api/officials/[slug].js
-function slugify(name) {
-  return name
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, "-")
-}
+import { resolveOfficialName } from "../../../../lib/slugIndex"
 
 export default async function handler(req, res) {
   const { slug } = req.query
@@ -18,15 +9,8 @@ export default async function handler(req, res) {
   }
   try {
     const db = await getDb()
-    // Resolve canonical official name from dpo_entries
-    const rows = await db.all(`SELECT DISTINCT person_name FROM dpo_entries`)
-    let canonical = null
-    for (const row of rows) {
-      if (slugify(row.person_name) === slug) {
-        canonical = row.person_name
-        break
-      }
-    }
+    // Resolve canonical official name via cached slug index (avoids full-table scan).
+    const canonical = await resolveOfficialName(db, slug)
     if (!canonical) {
       return res.status(404).json({ error: "Official not found" })
     }

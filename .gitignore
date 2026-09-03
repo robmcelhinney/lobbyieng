@@ -23,6 +23,15 @@
 # misc
 .DS_Store
 *.pem
+# Windows zone identifiers from downloaded CSVs
+*:Zone.Identifier
+*:zone.identifier
+
+# python
+.venv/
+__pycache__/
+*.egg-info/
+src/*.egg-info/
 
 # debug
 npm-debug.log*
@@ -41,6 +50,7 @@ yarn-error.log*
 next-env.d.ts
 
 lobbying.db
+lobbying.db-*
 
 data/*
 !data/derived/

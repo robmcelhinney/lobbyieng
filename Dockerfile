@@ -1,37 +1,40 @@
-# Use an official Node.js runtime as a parent image (Debian-based for easy Python install)
+# Debian-based for easy Python install
 FROM node:24-slim
 
-# Install Python 3, pip, and SQLite3
-RUN apt-get update && apt-get install -y \
+# System deps (cached unless changed). build-essential stays so the sqlite3
+# native module can compile if no prebuild exists for this Node version.
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     python3 \
-    python3-pip \
     sqlite3 \
+    ca-certificates \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Set the working directory
+# uv for Python deps (matches the local `uv sync` workflow)
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
 WORKDIR /app
 
-# Install Python dependencies (using --break-system-packages is safe inside a container)
-RUN pip3 install sqlalchemy requests --break-system-packages
+# Install JS deps first (cached unless package manifests change)
+COPY package.json package-lock.json ./
+RUN npm ci
 
-# Optimization: Copy parser and data first to cache the database generation
-# This prevents re-running the parser when only application code changes
-COPY parser.py .
+# Install Python deps (cached unless Python manifests change)
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen
+
+# Build the database (re-runs only when data or the parser changes).
+# Requires Register CSV exports in data/; optionally refresh
+# data/derived/committee_memberships.json beforehand (see README).
+COPY parser.py ./
 COPY data/ ./data/
-RUN python3 parser.py
+RUN uv run python parser.py
 
-# Install Node.js dependencies
-COPY package*.json ./
-RUN npm install
-RUN npm rebuild sqlite3 --build-from-source
-
-# Copy the rest of the application code
+# App code + production build (DB path explicit so runtime reads the built DB)
 COPY . .
-
-# Build the Next.js application
+ENV SQLITE_DB_PATH=/app/lobbying.db
 RUN npm run build
 
-# Start the application
 EXPOSE 3000
 CMD ["npm", "start"]

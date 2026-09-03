@@ -4,16 +4,7 @@ import Head from "next/head"
 import Link from "next/link"
 import { getServerBaseUrl } from "../lib/serverBaseUrl"
 import { selectStyles } from "../lib/selectStyles"
-
-// Utility function to match API slugify
-function slugify(name) {
-  return name
-    .normalize("NFD")
-    .replace(/[^\p{L}\p{N}]+/gu, "-") // Replace non-alphanumeric (unicode) with dash
-    .replace(/-+/g, "-") // Collapse multiple dashes
-    .replace(/^-|-$/g, "") // Trim leading/trailing dashes
-    .toLowerCase()
-}
+import { slugify } from "../lib/slugify"
 
 function normalizeLobbyists(rows) {
   return rows

@@ -207,10 +207,22 @@ class CommitteeMembership(Base):
     phones = Column(String)
     scraped_at = Column(String)
 
-engine = create_engine(DATABASE_URL, echo=False)
-Base.metadata.drop_all(engine)
-Base.metadata.create_all(engine)
-Session = sessionmaker(bind=engine)
+engine = None
+Session = None
+
+
+def init_db(database_url=DATABASE_URL):
+    """Create engine, recreate schema, and bind the session factory.
+
+    Called explicitly by run_pipeline() so that merely importing this module
+    (e.g. for its helpers) never wipes the database.
+    """
+    global engine, Session
+    engine = create_engine(database_url, echo=False)
+    Base.metadata.drop_all(engine)
+    Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    return engine
 
 # --- Helper Functions ---
 def safe_get(row, key):
@@ -234,6 +246,7 @@ def normalize_person_name(raw):
     return name
 
 def slugify(value):
+    # JS mirror: slugify() in lib/slugify.js (strict slug for lobbyists/committees).
     value = unicodedata.normalize("NFD", str(value or ""))
     value = "".join(ch for ch in value if unicodedata.category(ch) != "Mn")
     value = value.lower().strip()
@@ -242,6 +255,8 @@ def slugify(value):
     return value.strip("-")
 
 def official_slugify(value):
+    # JS mirror: officialSlugify() in lib/slugify.js (legacy whitespace-only
+    # slug for officials - preserves punctuation, keep in sync).
     value = unicodedata.normalize("NFD", str(value or ""))
     value = "".join(ch for ch in value if unicodedata.category(ch) != "Mn")
     value = value.lower().strip()
@@ -266,7 +281,7 @@ def normalize_token(raw):
         stem = stem[:-1]
     return stem if len(stem) >= 3 else ""
 
-def biggest_movers(current_rows, previous_rows):
+def biggest_movers(current_rows, previous_rows, slug_func=slugify):
     merged = {}
     for row in previous_rows:
         merged[row["name"]] = {"name": row["name"], "previous": row["contact_count"], "current": 0}
@@ -284,13 +299,19 @@ def biggest_movers(current_rows, previous_rows):
             "previous": row["previous"],
             "current": row["current"],
             "delta": delta,
-            "slug": slugify(row["name"])
+            "slug": slug_func(row["name"])
         })
     result.sort(key=lambda r: (-r["delta"], -r["current"], r["name"]))
     return result[:20]
 
 def rows_with_slug(rows):
     return [{**row, "slug": slugify(row["name"])} for row in rows]
+
+def official_rows_with_slug(rows):
+    # Officials resolve via officialSlugify() in lib/slugify.js - using the
+    # strict slug here produced explore-page links that 404'd on names with
+    # apostrophes (e.g. O'Brien, O'Gorman).
+    return [{**row, "slug": official_slugify(row["name"])} for row in rows]
 
 def build_explore_precomputed():
     conn = sqlite3.connect("lobbying.db")
@@ -523,21 +544,21 @@ def build_explore_precomputed():
             "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             "latest_period": latest_period,
             "previous_period": previous_period,
-            "top_targets_latest": rows_with_slug(top_targets_latest),
-            "top_targets_last_year": rows_with_slug(top_targets_last_year),
+            "top_targets_latest": official_rows_with_slug(top_targets_latest),
+            "top_targets_last_year": official_rows_with_slug(top_targets_last_year),
             "top_lobbyists_latest": rows_with_slug(top_lobbyists_latest),
             "most_active_lobbyists": rows_with_slug(most_active_lobbyists),
-            "biggest_mover_officials": biggest_movers(current_official_counts, previous_official_counts),
+            "biggest_mover_officials": biggest_movers(current_official_counts, previous_official_counts, official_slugify),
             "biggest_mover_lobbyists": biggest_movers(current_lobbyist_counts, previous_lobbyist_counts),
             "top_policy_areas_latest": top_policy_areas_latest,
             "top_keywords_latest": top_keywords_latest,
-            "official_centrality_latest": rows_with_slug(official_centrality_latest),
+            "official_centrality_latest": official_rows_with_slug(official_centrality_latest),
             "lobbyist_centrality_latest": rows_with_slug(lobbyist_centrality_latest),
             "shared_lobbyists_latest": [
                 {
                     **row,
-                    "official_a_slug": slugify(row["official_a"]),
-                    "official_b_slug": slugify(row["official_b"])
+                    "official_a_slug": official_slugify(row["official_a"]),
+                    "official_b_slug": official_slugify(row["official_b"])
                 }
                 for row in shared_lobbyists_latest
             ],
@@ -758,6 +779,7 @@ def insert_committee_memberships():
     return inserted
 
 def run_pipeline():
+    init_db()
     records = fetch_all_csv_records(DATA_FOLDER)
     if records:
         new_inserts = insert_records(records)
@@ -766,10 +788,10 @@ def run_pipeline():
         print("No records found.")
     committee_inserts = insert_committee_memberships()
     print(f"Inserted {committee_inserts} committee membership rows.")
+    return engine
 
-if __name__ == "__main__":
-    run_pipeline()
-    with engine.connect() as conn:
+def create_indexes(db_engine):
+    with db_engine.connect() as conn:
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_dpo_person_name ON dpo_entries(person_name)"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_dpo_person_name_record ON dpo_entries(person_name, lobbying_record_id)"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_dpo_lobbying_record_id ON dpo_entries(lobbying_record_id)"))
@@ -782,4 +804,9 @@ if __name__ == "__main__":
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_lr_date_published ON lobbying_records(date_published)"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_committee_memberships_member_slug ON committee_memberships(member_slug)"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_committee_memberships_committee_id ON committee_memberships(committee_id)"))
+
+
+if __name__ == "__main__":
+    run_pipeline()
+    create_indexes(engine)
     build_explore_precomputed()

@@ -27,6 +27,7 @@ DIRECTORIES = {
 
 
 def slugify(value):
+    # JS mirror: officialSlugify() in lib/slugify.js - keep in sync.
     value = unicodedata.normalize("NFD", str(value or ""))
     value = "".join(ch for ch in value if unicodedata.category(ch) != "Mn")
     value = value.lower().strip()

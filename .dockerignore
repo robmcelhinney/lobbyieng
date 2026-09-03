@@ -1,7 +1,16 @@
 node_modules
 .next
 .git
+.venv
+__pycache__
+*.egg-info/
 lobbying.db
+lobbying.db-*
+*.tsbuildinfo
+# Windows zone identifiers from downloaded CSVs
+*:Zone.Identifier
+.env*
+coverage
 Dockerfile
 docker-compose.yml
 README.md

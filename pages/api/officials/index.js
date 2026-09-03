@@ -1,13 +1,5 @@
 import { getDb } from "../../../lib/sqlite"
-
-function slugify(name) {
-  return name
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, "-")
-}
+import { officialSlugify as slugify } from "../../../lib/slugify"
 
 function normalizeNameKey(name) {
   return String(name || "")

@@ -11,7 +11,7 @@
     "refresh:data": "npm run fetch:csvs && npm run build:db",
     "refresh:data:current": "npm run fetch:csvs:current && npm run build:db",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "format": "prettier --write .",
     "check:outdated": "npx npm-check-updates"
   },
@@ -39,7 +39,6 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
-    "@tailwindcss/postcss": "^4",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -49,8 +48,5 @@
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
-  },
-  "overrides": {
-    "postcss": "$postcss"
   }
 }

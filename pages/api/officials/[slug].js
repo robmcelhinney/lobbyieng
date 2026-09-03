@@ -1,26 +1,8 @@
 import { getDb } from "../../../lib/sqlite"
 import { buildCacheKey, readCache, writeCache } from "../../../lib/serverCache"
+import { officialSlugify, slugify as committeeSlugify } from "../../../lib/slugify"
+import { resolveOfficialName } from "../../../lib/slugIndex"
 import { fetchOireachtasMemberContacts, loadCurrentOireachtasRoster } from "../../../lib/oireachtasRoster"
-
-function slugify(name) {
-  return name
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, "-")
-}
-
-function committeeSlugify(name) {
-  return name
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase()
-    .trim()
-    .replace(/[^\p{L}\p{N}]+/gu, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
-}
 
 // Helper: extract method from an activity string.
 // E.g., "One email to each of the listed TDs. - Email" returns "Email"
@@ -72,14 +54,15 @@ export default async function handler(req, res) {
       return
     }
 
+    const pageNum = Math.max(1, parseInt(Array.isArray(page) ? page[0] : page, 10) || 1)
     let perPageNum = 10
     let returnAll = false
     if (per_page === "All") {
       returnAll = true
     } else {
-      perPageNum = parseInt(per_page, 10) || 10
+      perPageNum = Math.min(100, Math.max(1, parseInt(per_page, 10) || 10))
     }
-    const offset = (page - 1) * perPageNum
+    const offset = (pageNum - 1) * perPageNum
 
     const db = await getDb()
 
@@ -89,15 +72,8 @@ export default async function handler(req, res) {
       allowedJobTitles = job_titles.split(",").map((t) => t.trim())
     }
 
-    // Resolve canonical official name from dpo_entries.
-    const dpoRows = await db.all(`SELECT person_name FROM dpo_entries`)
-    let canonical = null
-    for (const row of dpoRows) {
-      if (slugify(row.person_name) === slug) {
-        canonical = row.person_name
-        break
-      }
-    }
+    // Resolve canonical official name via cached slug index (avoids full-table scan).
+    const canonical = await resolveOfficialName(db, slug)
     if (!canonical) {
       return res.status(404).json({ error: "Official not found" })
     }
@@ -346,11 +322,11 @@ export default async function handler(req, res) {
     const lastSeen = dpoProfileRows.length ? dpoProfileRows[0].date_published : null
     const distinctTitles = Array.from(new Set(dpoProfileRows.map((r) => r.job_title).filter(Boolean))).sort()
     const distinctBodies = Array.from(new Set(dpoProfileRows.map((r) => r.public_body).filter(Boolean))).sort()
-    const officialSlug = slugify(canonical)
+    const officialSlug = officialSlugify(canonical)
     const currentRoster = await loadCurrentOireachtasRoster()
     const currentRosterMember = currentRoster.find((member) => member?.slug === officialSlug)
     const oireachtasContacts = currentRosterMember?.member_url
-      ? fetchOireachtasMemberContacts(currentRosterMember.member_url)
+      ? await fetchOireachtasMemberContacts(currentRosterMember.member_url)
       : { emails: [], phones: [], social_links: [] }
     let committeeMemberships = []
     try {
@@ -391,9 +367,9 @@ export default async function handler(req, res) {
 
     const payload = {
       name: canonical,
-      slug: slugify(canonical),
+      slug: officialSlugify(canonical),
       total,
-      page: parseInt(page),
+      page: pageNum,
       pageSize: returnAll ? records.length : perPageNum,
       records: parsedRecords,
       profile: {

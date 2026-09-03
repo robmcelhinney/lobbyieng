@@ -1,5 +1,6 @@
 import { useState } from "react"
 import Link from "next/link"
+import { officialSlugify, slugify } from "../lib/slugify"
 
 export default function LobbyingCard({ record }) {
   const {
@@ -37,14 +38,6 @@ export default function LobbyingCard({ record }) {
   const methodsLimit = 3
   const shownMethods = methodsExpanded ? parsedActivities : parsedActivities.slice(0, methodsLimit)
   const hasMoreMethods = parsedActivities.length > methodsLimit
-
-  const slugify = (name) =>
-    name
-      .normalize("NFD")
-      .replace(/\p{Diacritic}/gu, "")
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, "-")
 
   return (
     <article className="surface-card">
@@ -105,7 +98,7 @@ export default function LobbyingCard({ record }) {
             {shownOfficials.map((officialName, i) => (
               <Link
                 key={`${officialName}-${i}`}
-                href={`/officials/${slugify(officialName)}`}
+                href={`/officials/${officialSlugify(officialName)}`}
                 className="text-xs md:text-sm px-2.5 py-1 rounded-full border border-[var(--ui-border)] bg-white/80 dark:bg-slate-900/35 hover:underline no-underline"
               >
                 {officialName}

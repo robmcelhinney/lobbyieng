@@ -19,6 +19,7 @@ CHAMBER_CONFIG = {
 
 
 def slugify(name: str) -> str:
+    # JS mirror: officialSlugify() in lib/slugify.js - keep in sync.
     name = unicodedata.normalize("NFD", name)
     name = "".join(ch for ch in name if not unicodedata.combining(ch))
     name = name.lower()
