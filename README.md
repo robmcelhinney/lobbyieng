@@ -115,13 +115,13 @@ make build-db
 Dáil member thumbnail images are committed in `public/images/td_thumbnails/`. To refresh them:
 
 ```bash
-uv run python download-oireachtas-images.py
+uv run python scripts/download-oireachtas-images.py
 ```
 
 Senator thumbnails are stored separately in `public/images/senator_thumbnails/`:
 
 ```bash
-uv run python download-oireachtas-images.py --chamber seanad
+uv run python scripts/download-oireachtas-images.py --chamber seanad
 ```
 
 ### 🏛️ Fetch Current Committee Memberships (optional)

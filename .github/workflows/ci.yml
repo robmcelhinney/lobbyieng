@@ -23,7 +23,7 @@ jobs:
 
       - name: Python syntax + import safety (parser must not wipe DB on import)
         run: |
-          uv run python -m compileall -q parser.py scripts download-oireachtas-images.py
+          uv run python -m compileall -q parser.py scripts
           uv run python -c "import parser; assert parser.engine is None and parser.Session is None"
 
       - name: Install JS deps

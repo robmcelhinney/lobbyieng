@@ -2,7 +2,8 @@ import path from "path"
 import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["http://localhost:3000", "http://172.17.196.201:3000"],
+  // For on-device testing over LAN: DEV_EXTRA_ORIGIN=http://<lan-ip>:3000 npm run dev
+  allowedDevOrigins: ["http://localhost:3000", ...(process.env.DEV_EXTRA_ORIGIN ? [process.env.DEV_EXTRA_ORIGIN] : [])],
   outputFileTracingRoot: path.join(__dirname),
   async headers() {
     return [
