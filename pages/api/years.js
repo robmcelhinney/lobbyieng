@@ -5,10 +5,9 @@ export default async function handler(req, res) {
     const db = await getDb()
     const rows = await db.all(
       `
-      SELECT DISTINCT substr(TRIM(period), -4) AS year
+      SELECT DISTINCT CAST(period_year AS TEXT) AS year
       FROM lobbying_records
-      WHERE period IS NOT NULL
-        AND substr(TRIM(period), -4) GLOB '[0-9][0-9][0-9][0-9]'
+      WHERE period_year IS NOT NULL
       ORDER BY year ASC
       `
     )

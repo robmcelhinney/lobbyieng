@@ -114,11 +114,9 @@ export default async function handler(req, res) {
 
     const years = await db.all(
       `
-      SELECT DISTINCT substr(TRIM(period), -4) AS year
+      SELECT DISTINCT CAST(period_year AS TEXT) AS year
       FROM lobbying_records
-      WHERE period IS NOT NULL
-        AND TRIM(period) != ''
-        AND substr(TRIM(period), -4) GLOB '[0-9][0-9][0-9][0-9]'
+      WHERE period_year IS NOT NULL
       ORDER BY year DESC
       `
     )
@@ -135,7 +133,7 @@ export default async function handler(req, res) {
           SELECT dpo.person_name AS name, COUNT(DISTINCT lr.id) AS contact_count
           FROM dpo_entries dpo
           JOIN lobbying_records lr ON lr.id = dpo.lobbying_record_id
-          WHERE substr(TRIM(lr.period), -4) = ? AND dpo.person_name IS NOT NULL AND TRIM(dpo.person_name) != ''
+          WHERE lr.period_year = ? AND dpo.person_name IS NOT NULL AND TRIM(dpo.person_name) != ''
           GROUP BY dpo.person_name
           ORDER BY contact_count DESC, dpo.person_name ASC
           LIMIT 20
@@ -162,7 +160,7 @@ export default async function handler(req, res) {
             COUNT(DISTINCT dpo.person_name) AS unique_targets
           FROM lobbying_records lr
           LEFT JOIN dpo_entries dpo ON dpo.lobbying_record_id = lr.id
-          WHERE substr(TRIM(lr.period), -4) = ? AND lr.lobbyist_name IS NOT NULL AND TRIM(lr.lobbyist_name) != ''
+          WHERE lr.period_year = ? AND lr.lobbyist_name IS NOT NULL AND TRIM(lr.lobbyist_name) != ''
           GROUP BY lr.lobbyist_name
           ORDER BY return_count DESC, unique_targets DESC, lr.lobbyist_name ASC
           LIMIT 20
@@ -189,7 +187,7 @@ export default async function handler(req, res) {
           SELECT dpo.person_name AS name, COUNT(DISTINCT lr.id) AS contact_count
           FROM dpo_entries dpo
           JOIN lobbying_records lr ON lr.id = dpo.lobbying_record_id
-          WHERE substr(TRIM(lr.period), -4) = ? AND dpo.person_name IS NOT NULL AND TRIM(dpo.person_name) != ''
+          WHERE lr.period_year = ? AND dpo.person_name IS NOT NULL AND TRIM(dpo.person_name) != ''
           GROUP BY dpo.person_name
           `,
           [yearFilter]
@@ -201,7 +199,7 @@ export default async function handler(req, res) {
           SELECT dpo.person_name AS name, COUNT(DISTINCT lr.id) AS contact_count
           FROM dpo_entries dpo
           JOIN lobbying_records lr ON lr.id = dpo.lobbying_record_id
-          WHERE substr(TRIM(lr.period), -4) = ? AND dpo.person_name IS NOT NULL AND TRIM(dpo.person_name) != ''
+          WHERE lr.period_year = ? AND dpo.person_name IS NOT NULL AND TRIM(dpo.person_name) != ''
           GROUP BY dpo.person_name
           `,
           [previousYear]
@@ -213,7 +211,7 @@ export default async function handler(req, res) {
           `
           SELECT lr.lobbyist_name AS name, COUNT(DISTINCT lr.id) AS contact_count
           FROM lobbying_records lr
-          WHERE substr(TRIM(lr.period), -4) = ? AND lr.lobbyist_name IS NOT NULL AND TRIM(lr.lobbyist_name) != ''
+          WHERE lr.period_year = ? AND lr.lobbyist_name IS NOT NULL AND TRIM(lr.lobbyist_name) != ''
           GROUP BY lr.lobbyist_name
           `,
           [yearFilter]
@@ -231,7 +229,7 @@ export default async function handler(req, res) {
           `
           SELECT lr.lobbyist_name AS name, COUNT(DISTINCT lr.id) AS contact_count
           FROM lobbying_records lr
-          WHERE substr(TRIM(lr.period), -4) = ? AND lr.lobbyist_name IS NOT NULL AND TRIM(lr.lobbyist_name) != ''
+          WHERE lr.period_year = ? AND lr.lobbyist_name IS NOT NULL AND TRIM(lr.lobbyist_name) != ''
           GROUP BY lr.lobbyist_name
           `,
           [previousYear]
@@ -248,7 +246,7 @@ export default async function handler(req, res) {
           `
           SELECT public_policy_area AS name, COUNT(*) AS return_count
           FROM lobbying_records
-          WHERE substr(TRIM(period), -4) = ? AND public_policy_area IS NOT NULL AND TRIM(public_policy_area) != ''
+          WHERE period_year = ? AND public_policy_area IS NOT NULL AND TRIM(public_policy_area) != ''
           GROUP BY public_policy_area
           ORDER BY return_count DESC, public_policy_area ASC
           LIMIT 20
@@ -275,7 +273,7 @@ export default async function handler(req, res) {
             COALESCE(specific_details, '') AS specific_details,
             COALESCE(relevant_matter, '') AS relevant_matter
           FROM lobbying_records
-          WHERE substr(TRIM(period), -4) = ?
+          WHERE period_year = ?
           `,
           [yearFilter]
         )
@@ -313,7 +311,7 @@ export default async function handler(req, res) {
             SELECT DISTINCT dpo.person_name AS official, lr.lobbyist_name AS lobbyist
             FROM lobbying_records lr
             JOIN dpo_entries dpo ON dpo.lobbying_record_id = lr.id
-            WHERE substr(TRIM(lr.period), -4) = ?
+            WHERE lr.period_year = ?
               AND dpo.person_name IS NOT NULL AND TRIM(dpo.person_name) != ''
               AND lr.lobbyist_name IS NOT NULL AND TRIM(lr.lobbyist_name) != ''
           )
@@ -349,7 +347,7 @@ export default async function handler(req, res) {
             SELECT DISTINCT dpo.person_name AS official, lr.lobbyist_name AS lobbyist
             FROM lobbying_records lr
             JOIN dpo_entries dpo ON dpo.lobbying_record_id = lr.id
-            WHERE substr(TRIM(lr.period), -4) = ?
+            WHERE lr.period_year = ?
               AND dpo.person_name IS NOT NULL AND TRIM(dpo.person_name) != ''
               AND lr.lobbyist_name IS NOT NULL AND TRIM(lr.lobbyist_name) != ''
           )
@@ -385,7 +383,7 @@ export default async function handler(req, res) {
             SELECT DISTINCT dpo.person_name AS official, lr.lobbyist_name AS lobbyist
             FROM lobbying_records lr
             JOIN dpo_entries dpo ON dpo.lobbying_record_id = lr.id
-            WHERE substr(TRIM(lr.period), -4) = ?
+            WHERE lr.period_year = ?
               AND dpo.person_name IS NOT NULL AND TRIM(dpo.person_name) != ''
               AND lr.lobbyist_name IS NOT NULL AND TRIM(lr.lobbyist_name) != ''
           )
@@ -448,7 +446,7 @@ export default async function handler(req, res) {
               OR LOWER(COALESCE(lr.relevant_matter, '')) LIKE LOWER(?)
               OR LOWER(COALESCE(lr.public_policy_area, '')) LIKE LOWER(?)
             )
-            ${yearFilter ? "AND substr(TRIM(lr.period), -4) = ?" : ""}
+            ${yearFilter ? "AND lr.period_year = ?" : ""}
             GROUP BY lr.id
             ORDER BY lr.date_published DESC
             LIMIT 50

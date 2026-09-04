@@ -44,7 +44,7 @@ export default async function handler(req, res) {
       filterParams.push(official.toLowerCase())
     }
     if (year) {
-      filterConditions += " AND substr(TRIM(lr.period), -4) = ? "
+      filterConditions += " AND lr.period_year = ? "
       filterParams.push(year)
     }
     // Accept method as array for multi-select (OR logic)
@@ -203,7 +203,11 @@ export default async function handler(req, res) {
 
     const uniqueOfficials = Array.from(new Set(allRecords.flatMap((r) => r.dpo_entries).filter(Boolean))).sort()
     const uniqueYears = Array.from(
-      new Set(allRaw.map((r) => String(r.period || "").trim().slice(-4)).filter((value) => /^\d{4}$/.test(value)))
+      new Set(
+        allRaw
+          .map((r) => (r.period_year != null ? String(r.period_year) : String(r.period || "").trim().slice(-4)))
+          .filter((value) => /^\d{4}$/.test(value))
+      )
     ).sort((a, b) => b - a)
 
     const payload = {

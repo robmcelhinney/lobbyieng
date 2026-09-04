@@ -18,7 +18,7 @@ export default async function handler(req, res) {
     const hasYearFilter = typeof year === "string" && /^\d{4}$/.test(year)
     const hasPeriodFilter = !hasYearFilter && period && period !== "All"
     const hasTimeFilter = hasYearFilter || hasPeriodFilter
-    const timeCondition = hasYearFilter ? "AND substr(TRIM(lr.period), -4) = ?" : "AND lr.period = ?"
+    const timeCondition = hasYearFilter ? "AND lr.period_year = ?" : "AND lr.period = ?"
     const timeParams = hasYearFilter ? [year] : hasPeriodFilter ? [period] : []
     // Parse job_titles from comma-separated string to array
     let allowedJobTitles = null

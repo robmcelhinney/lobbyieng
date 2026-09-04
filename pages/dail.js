@@ -30,11 +30,13 @@ const API_CACHE_BUSTER = "3"
 export async function getOfficialsPageProps(context, officialTitles = dailOfficialTitles, chamber = "dail") {
   const baseUrl = getServerBaseUrl(context.req)
   try {
-    const yearsRes = await fetch(`${baseUrl}/api/years`)
+    const [yearsRes, rosterRes] = await Promise.all([
+      fetch(`${baseUrl}/api/years`),
+      fetch(`${baseUrl}/api/current-oireachtas-members?chamber=${encodeURIComponent(chamber)}`)
+    ])
     const yearsJson = yearsRes.ok ? await yearsRes.json() : { years: [], latestYear: "" }
     const years = yearsJson.years || []
     const latestYear = yearsJson.latestYear || years.at(-1) || ""
-    const rosterRes = await fetch(`${baseUrl}/api/current-oireachtas-members?chamber=${encodeURIComponent(chamber)}`)
     const currentRoster = rosterRes.ok ? await rosterRes.json() : []
     const currentRosterSlugs = Array.from(
       new Set((Array.isArray(currentRoster) ? currentRoster : []).map((member) => member?.slug).filter(Boolean))

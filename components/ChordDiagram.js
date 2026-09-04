@@ -1,6 +1,17 @@
 import React, { useRef, useEffect, useState } from "react"
 import * as d3 from "d3"
 
+// Names rendered here originate from register CSV data and are injected via
+// dangerouslySetInnerHTML below, so escape them to prevent stored XSS.
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+}
+
 /**
  * ChordDiagram renders a D3 chord diagram for lobbyist-official connections.
  * @param {Array} records - Array of lobbying records: [{ lobbyist_name, dpo_entries:[{person_name, connection_count}], ... }]
@@ -106,7 +117,7 @@ export default function ChordDiagram({
       .attr("d", d3.arc().innerRadius(innerRadius).outerRadius(outerRadius))
       .on("mousemove", function (event, d) {
         const label = labels[d.index]
-        let html = `<strong>${label}</strong><br/>`
+        let html = `<strong>${escapeHtml(label)}</strong><br/>`
         if (d.index === 0 || d.index === labels.length - 1) {
           // Official
           const official = label
@@ -119,10 +130,10 @@ export default function ChordDiagram({
           // Lobbyist
           const lobbyist = label
           const rec = records.find((r) => r.lobbyist_name === lobbyist)
-          html += `Total with ${official1}: <b>${
+          html += `Total with ${escapeHtml(official1)}: <b>${
             rec?.dpo_entries.find((d) => d.person_name === official1)?.connection_count || 0
           }</b><br/>`
-          html += `Total with ${official2}: <b>${
+          html += `Total with ${escapeHtml(official2)}: <b>${
             rec?.dpo_entries.find((d) => d.person_name === official2)?.connection_count || 0
           }</b>`
         }
@@ -179,7 +190,7 @@ export default function ChordDiagram({
           lobbyist = labelTarget
           official = labelSource
         }
-        let html = `<strong>${lobbyist} → ${official}</strong><br/>`
+        let html = `<strong>${escapeHtml(lobbyist)} → ${escapeHtml(official)}</strong><br/>`
         html += `Lobbying records: <b>${value}</b>`
         showTooltip(html, event)
       })

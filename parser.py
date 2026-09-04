@@ -149,6 +149,9 @@ class LobbyingRecord(Base):
     lobbyist_name = Column(String)
     date_published = Column(DateTime)
     period = Column(String)
+    # Year parsed from the trailing year of `period` at ingest, so API
+    # queries never depend on the register's period string format.
+    period_year = Column(Integer)
     relevant_matter = Column(String)
     public_policy_area = Column(String)
     specific_details = Column(Text)
@@ -228,6 +231,10 @@ def init_db(database_url=DATABASE_URL):
 def safe_get(row, key):
     val = row.get(key)
     return (val if val is not None else "").strip()
+
+def extract_period_year(period):
+    match = re.search(r"(\d{4})\s*$", period or "")
+    return int(match.group(1)) if match else None
 
 def normalize_person_name(raw):
     name = raw.strip()
@@ -651,6 +658,7 @@ def insert_records(records):
             lobbyist_name=record["lobbyist_name"],
             date_published=record["date_published"],
             period=record["period"],
+            period_year=extract_period_year(record["period"]),
             relevant_matter=record["relevant_matter"],
             public_policy_area=record["public_policy_area"],
             specific_details=record["specific_details"],
@@ -796,6 +804,7 @@ def create_indexes(db_engine):
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_dpo_person_name_record ON dpo_entries(person_name, lobbying_record_id)"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_dpo_lobbying_record_id ON dpo_entries(lobbying_record_id)"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_lr_period ON lobbying_records(period)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_lr_period_year ON lobbying_records(period_year)"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_lr_lobbyist_name ON lobbying_records(lobbyist_name)"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_lr_period_date ON lobbying_records(period, date_published)"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_lr_lobbyist_period_date ON lobbying_records(lobbyist_name, period, date_published)"))

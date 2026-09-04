@@ -7,7 +7,7 @@ export default async function handler(req, res) {
     const hasYearFilter = typeof year === "string" && /^\d{4}$/.test(year)
     const hasPeriodFilter = !hasYearFilter && period && period !== "All"
     const timeCondition = hasYearFilter
-      ? "AND substr(TRIM(period), -4) = ?"
+      ? "AND period_year = ?"
       : hasPeriodFilter
         ? "AND period = ?"
         : ""
