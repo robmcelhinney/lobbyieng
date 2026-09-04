@@ -18,7 +18,7 @@ WORKDIR /app
 
 # Install JS deps first (cached unless package manifests change)
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci && npm rebuild sqlite3 --build-from-source
 
 # Install Python deps (cached unless Python manifests change)
 COPY pyproject.toml uv.lock ./
